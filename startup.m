@@ -5,10 +5,14 @@ else
     addpath('/project/3011085.02/phasecode/scripts/');
     addpath('/project/3011085.02/phasecode/data/');
     addpath('/project/3011085.02/phasecode/results/');
-    addpath('/home/common/matlab/fieldtrip');
-    addpath('/home/common/matlab/fieldtrip/qsub');
-    addpath('/home/common/matlab/fieldtrip/external/dmlt/');
-    addpath('/home/common/matlab/fieldtrip/external/dmlt/external/glmnet/');
+    addpath('/project/3011085.02/scripts/fieldtrip');
+    addpath('/project/3011085.02/scripts/fieldtrip/qsub');
+    addpath('/project/3011085.02/scripts/fieldtrip/external/dmlt/');
+    addpath('/project/3011085.02/scripts/fieldtrip/external/dmlt/external/glmnet/')
+    addpath('/project/3011085.02/scripts/fieldtrip/external/dmlt/')
+addpath('/project/3011085.02/scripts/fieldtrip/external/dmlt/external/')
+addpath('/project/3011085.02/scripts/fieldtrip/external/dmlt/external/svm/')
+    addpath('/project/3011085.02/scripts/fieldtrip/external/brewermap');
     cd('/project/3011085.02/phasecode/scripts/')
 end
 ft_defaults
