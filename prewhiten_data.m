@@ -7,10 +7,13 @@ function [data, cov, cov_inv] = prewhiten_data(data)
 cfg=[];
 cfg.removemean = 'no';
 cfg.covariance = 'yes';
+cfg.keeptrials = 'yes';
 for k=1:numel(data)
-  cov(k) = ft_timelockanalysis(cfg, data{k});
+  cov{k} = ft_timelockanalysis(cfg, data{k});
+  cov{k} = cov{k}.cov;
 end
-cov = mean(cat(3,cov(:).cov),3);
+cov = mean(cat(4,cov{:}),4);
+cov= squeeze(mean(cov,1));
 cov_inv = cov^-0.5;
 
 for k=1:numel(data)
