@@ -1,7 +1,7 @@
-function analysis_classifier_enet(subj, tBegin, class, hemifield)
+function analysis_classifier_enet(subj, tBegin, class, hemifield, trainfullwindow, leaveoutwoi)
 
 % class=1 means orientation of both gratings (CW_CW vs CCW_CCW)
-% class=2 means orientation of attended grating (CW_CW vs CCW_CCW)
+% class=2 means orientation of attended grating (CW vs CCW)
 % class=3 means attend left vs attend right irrespective of orientations
 if ~exist('class', 'var'), class=4; end
 if ~exist('hemifield', 'var'), hemifield=1; end
@@ -17,6 +17,12 @@ for ses=1:3
     tmp{ses} = tmp{ses}.data;
 end
 data = ft_appenddata([], tmp{:});
+
+cfg=[];
+cfg.lpfilter = 'yes';
+cfg.lpfreq = 40;
+cfg.lpfilttype = 'firws';
+data = ft_preprocessing(cfg, data);
 
 clear tmp
 dt=1/200;
@@ -181,7 +187,7 @@ elseif class==4
         end
         
         cfg = [];
-        cfg.latency = [-1 1.2];
+        cfg.latency = [-0.3 1.2];
         cfg.trials = trl_idx_CW;
         dataCW = ft_selectdata(cfg, validdata);
         cfg.trials = trl_idx_CCW;
@@ -204,11 +210,11 @@ end
 
 
 %% Classify 
-windowSize = 0.02;
+windowSize = 1/200%0.02;
 ntpoints = windowSize/dt;
 cfg=[];
 if isempty(tBegin)
-    toilim = [0.5+dt 1.2];
+    toilim = [dt 1.2];
 else
     toilim = [tBegin+dt tBegin+windowSize];
 end
@@ -339,9 +345,11 @@ else
         
         % Test model
         tmp = model.test(testCW);
+        tmp(1,1)
         probability(k,:) = tmp(1,1);         % save result
         tmp = model.test(testCCW);
         probability(k+ntrials,:) = tmp(1,2);
+        tmp(1,1)
     end
 end
  %{   
@@ -405,10 +413,11 @@ end
 end
    %} 
 %% Save
-filename = sprintf('/project/3011085.02/phasecode/results/enet/sub%02d/sub%02d_enet.mat', subj, subj);
+filename = sprintf('/project/3011085.02/phasecode/results/enet/sub%02d/fullwindow/sub%02d_enet', subj, subj);
 if isempty(tBegin)
+    filename = [filename, '.mat'];
     save(filename, 'probability', 'trialinfo', 'toilim', 'dataCW_short', 'dataCCW_short')
 else
-    filename = [filename, sprintf('_%s', num2str(tBegin))];
+    filename = [filename, sprintf('_%s', num2str(tBegin)), '.mat'];
     save(filename, 'probability', 'trialinfo', 'toilim')
 end
