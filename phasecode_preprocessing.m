@@ -20,7 +20,7 @@ cfg.dftfilter = 'yes';
 cfg.dftfreq = [49 51; 99 101; 149 151];
 cfg.usefftfilt = 'yes';
 cfg.hpfilter = 'yes';
-cfg.hpfreq = 1;
+cfg.hpfreq = 0.1;
 cfg.hpfilttype = 'firws';
 data = ft_preprocessing(cfg);
 
@@ -42,7 +42,7 @@ data.badtrials=trlind;
 % save data data %could be used to save the bad trialnumbers with the raw
 % data.
 %}
-filename = [datadir, sprintf('3016045.07_matves_%03d_%03d', subj, ses), '\artifacts\', sprintf('session%d', ses)];
+filename = [projectdir, sprintf('results/artifact/sub%02d_ses%d', subj, ses)]
 load(filename)
 
 
@@ -134,11 +134,11 @@ artfctdef.muscle = artifact_muscle;
 artfctdef.jump = artifact_jump;
 
 % Save artifacts
-filename = [datadir, sprintf('3016045.07_matves_%03d_%03d', subj, ses), '\artifacts\', 'artifact'];
+filename = [projectdir, sprintf('results/artifact/sub%02d_ses%d_artifact', subj, ses)];
 save(filename, 'artfctdef')
 else
 % when loading previously defined artifacts:
-filename = [datadir, sprintf('3016045.07_matves_%03d_%03d', subj, ses), '\artifacts\', 'artifact'];
+filename = [projectdir, sprintf('results/artifact/sub%02d_ses%d_artifact', subj, ses)];
 load(filename)
 end
 
@@ -162,7 +162,7 @@ cfg.resamplefs = 200;
 dataresampled = ft_resampledata(cfg,data);
 
 % ICA
-filename = [datadir, sprintf('3016045.07_matves_%03d_%03d', subj, ses), '\artifacts\', 'ica'];
+filename = [projectdir, sprintf('results/artifact/sub%02d_ses%d_ica', subj, ses)];
 if doica
   cfg=[];
   cfg.method          = 'fastica';
@@ -195,6 +195,6 @@ cfg.artfctdef.reject = 'complete'; % remove complete trials
 cfg.artfctdef.crittoilim = [-1 1]; % only remove trials that have an artifact within first second (grating) or just before the grating onset
 data = ft_rejectartifact(cfg, data);
 
-filename = [datadir, sprintf('3016045.07_matves_%03d_%03d', subj, ses), '/cleandata.mat'];
+filename = [datadir, sprintf('sub%02d/sub%02d-meg%02d/sub%02d-meg%02d_cleandata.mat', subj,subj,ses, subj, ses)];
 save(filename, 'data')
 
