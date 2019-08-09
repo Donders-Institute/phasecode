@@ -273,7 +273,7 @@ for bin = 1:size(trl,2)
         
         % loop over trials: leave one trial out decoding
         for itrl=1:ngroups
-          [traindata, testdata, traindesign, testdesign] = enet_preparedata(dat, itrl, cnt)
+          [traindata, testdata, traindesign, testdesign] = enet_preparedata(dat, itrl, cnt);
           model = model.train(traindata,traindesign);
           tmpacc = model.test(testdata);
           for k=1:numel(testdesign)
