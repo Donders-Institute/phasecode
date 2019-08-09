@@ -4,7 +4,7 @@ valid_subjects=2:9;
 % subjects(1).dataset = '/home/electromag/matves/Data/phasecode/meg_raw/pilot/matspilot1_1200hz_20150330_01.ds';
 % subjects(1).trialfun = 'mytrialfun_pilot';
 projectdir = '/project/3011085.02/phasecode/';
-datadir = [projectdir, 'DATA/'];
+datadir = [projectdir, 'data/'];
 %% experiment
 % 1
 subjects(1).sessions = [1,2,3];
@@ -67,16 +67,16 @@ subjects(3).class{3} = 435;
 % 4
 subjects(4).sessions = [1,2,22,3];
 subjects(4).channels = {'MEG', '-MLT31', '-MLT41', '-MLF32'};
-subjects(4).session(1).dataset = '/home/electromag/matves/Data/phasecode/meg_raw/subject04/session1/301604507matves041_1200hz_20150709_01.ds';
+subjects(4).session(1).dataset = [datadir, 'sub04/sub04-meg01/301604507matves041_1200hz_20150709_01.ds'];
 subjects(4).session(1).icacomp = [6 12 32];
 % subjects(4).session(1).icacompLP = [];
-subjects(4).session(2).dataset = '/home/electromag/matves/Data/phasecode/meg_raw/subject04/session2/301604507matves042_1200hz_20150710_01.ds';
+subjects(4).session(2).dataset = [datadir, 'sub04/sub04-meg02/301604507matves042_1200hz_20150710_01.ds'];
 subjects(4).session(2).icacomp = [6 13 18];
 % subjects(4).session(2).icacompLP = [];
-subjects(4).session(22).dataset = '/home/electromag/matves/Data/phasecode/meg_raw/subject04/session2/301604507matves042b_1200hz_20150710_01.ds';
+subjects(4).session(22).dataset = [datadir, 'sub04/sub04-meg02/301604507matves042b_1200hz_20150710_01.ds'];
 subjects(4).session(22).icacomp = [8 13];
 % subjects(4).session(22).icacompLP = [];
-subjects(4).session(3).dataset = '/home/electromag/matves/Data/phasecode/meg_raw/subject04/session3/301604507matves043_1200hz_20150713_01.ds';
+subjects(4).session(3).dataset = [datadir, 'sub04/sub04-meg03/301604507matves043_1200hz_20150713_01.ds'];
 subjects(4).session(3).icacomp = [5 42];
 % subjects(4).session(3).icacompLP = [];
 subjects(4).trialfun = 'mytrialfun';
