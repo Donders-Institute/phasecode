@@ -13,8 +13,8 @@ for k=1:numel(data)
   cov{k} = cov{k}.cov;
 end
 cov = mean(cat(4,cov{:}),4);
-cov= squeeze(mean(cov,1));
-cov_inv = cov^-0.5;
+cov_avg= squeeze(mean(cov,1));
+cov_inv = cov_avg^-0.5;
 
 for k=1:numel(data)
   for t = 1:size(data{k}.trial,3)
