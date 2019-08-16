@@ -1,22 +1,27 @@
-if ~exist('do_allses', 'var'), do_allses = 1; end
-if ~exist('do_baselinecorrect', 'var'), do_baselinecorrect=0; end
-if ~exist('do_pca', 'var'), do_pca = 0; end
-if ~exist('do_correcttrials', 'var'), do_correcttrials = 0; end
-if ~exist('do_phasebin', 'var'), do_phasebin = 0; end
-if ~exist('do_timeresolved', 'var'), do_timeresolved = 0; end
-if ~exist('contrast', 'var'), contrast = 'congruent'; end
-if ~exist('do_avgtrials', 'var'), do_avgtrials = false; end
-if ~exist('do_prewhiten', 'var'), do_prewhiten = false; end
-if ~exist('do_smooth', 'var'), do_smooth = false; end
-if ~exist('do_enet', 'var'), do_enet = false; end
-if ~exist('randnr' ,'var'), randnr = []; end
-if ~exist('tbin','var'), tbin = randnr; end
-if ~exist('getcov','var'), getcov = 0; end
-if ~exist('do_binpertimepoint', 'var'), do_binpertimepoint=false; end
-if ~exist('do_phasealign', 'var'), do_phasealign = false; end
-if ~exist('do_nestedcv', 'var'), do_nestedcv = false; end
+function analysis_decoding(subj, contrast, varargin)
+if ~exist('contrast', 'var') || nargin<2,       contrast = 'congruent'; end
+if ~exist('subj', 'var')     || nargin<1,       subj=4; end
 
-subj=4;
+do_allses          = ft_getopt(varargin, 'do_allses',          true);
+do_baselinecorrect = ft_getopt(varargin, 'do_baselinecorrect', false);
+do_pca             = ft_getopt(varargin, 'do_pca',             false);
+do_correcttrials   = ft_getopt(varargin, 'do_correcttrials',   false);
+do_timeresolved    = ft_getopt(varargin, 'do_timeresolved',    false);
+do_avgtrials       = ft_getopt(varargin, 'do_avgtrials',       false);
+do_prewhiten       = ft_getopt(varargin, 'do_prewhiten',       false);
+do_smooth          = ft_getopt(varargin, 'do_smooth',          false);
+do_enet            = ft_getopt(varargin, 'do_enet',            false);
+do_nestedcv        = ft_getopt(varargin, 'do_nestedcv',        false);
+do_phasealign      = ft_getopt(varargin, 'do_phasealign',      false);
+bpfreq             = ft_getopt(varargin, 'bpfreq',             [8 12]);
+do_phasebin        = ft_getopt(varargin, 'do_phasebin',        false);
+do_binpertimepoint = ft_getopt(varargin, 'do_binpertimepoint', false);
+randnr             = ft_getopt(varargin, 'randnr',             []);
+tbin               = ft_getopt(varargin, 'tbin',               []);
+
+
+ft_info off
+
 rng('shuffle');
 
 % load data
@@ -30,6 +35,7 @@ if do_allses
     tmp{k} = tmp{k}.data;
   end
   data = ft_appenddata([], tmp{:});
+  data.grad = tmp{1}.grad;
 else
   filename = [projectdir, sprintf('data/sub%02d/sub%02d-meg%02d/sub%02d-meg%02d_cleandata.mat', subj, subj, ses, subj, ses)];
   load(filename, 'data');
@@ -42,14 +48,16 @@ if do_phasebin
 else
   centerphase = 0;
 end
-[trl, phase, distance, time] = analysis_alphaphase(data, centerphase);
+[trl, phase, distance, time] = analysis_alphaphase(data, bpfreq, centerphase);
 
-toi = -0.1:1/data.fsample:1.2;
+
 if do_timeresolved
+  toi = -0.1:1/data.fsample:1.2;
   tlength = numel(toi);
   twindow = 1/fs;
   nsample = twindow*fs;
 else
+  toi = 0.4:1/data.fsample:1.2;
   tlength=1;
 end
 
@@ -63,17 +71,21 @@ if do_baselinecorrect
 end
 
 if do_phasealign
-  freq=10;
-  examplephase = 0:2*pi/(fs/freq):2*pi;
-  examplephase = repmat(examplephase, [1 ceil(numel(time)/numel(examplephase))+1]);
-  shiftframes = fs/freq;
+  alignfreq = mean(bpfreq);
+  examplephase = 0:2*pi/(fs/alignfreq):2*pi;
+  shorttime = nearest(time, 0.4);
+  shortphase = phase(:,shorttime:end);
+  shorttime = time(shorttime:end);
+  examplephase = repmat(examplephase, [1 ceil(numel(shorttime)/numel(examplephase))+1]);
+  shiftframes = floor(fs/alignfreq);
   for k=1:size(phase,1)
-    for l=0:1:shiftframes-1
-      tmpphase = examplephase(l+1:numel(time)+l);
-      R(k,l+1) = corr(tmpphase', phase(k,:)');
+    for l=1:shiftframes-1
+      tmpphase = examplephase(l+1:l+size(phase,2));
+      R(k,l+1) = corr(tmpphase', shortphase(k,:)');
     end
   end
   [~, shiftidx] = max(R');
+  shiftidx = shiftidx - 1; % miminal shift is no shift at all.
   for k=1:numel(data.trial)
     data.time{k} = data.time{k} + shiftidx(k)/data.fsample;
   end
@@ -103,23 +115,12 @@ else
   trltime=1;
 end
 
-% compute covariance on all data if necessary
-if (do_phasebin && do_prewhiten) || getcov
-  tmpfname = sprintf('/project/3011085.02/phasecode/results/phasebin_svm/sub%02d_cov.mat', subj);
-  if do_phasebin && do_prewhiten
-    if ~isfile(tmpfname)
-      execute_pipeline('analysis_decoding', [], {'getcov', true}, {'do_baselinecorrect',do_baselinecorrect},{'do_pca', do_pca},{'do_allses',do_allses}, {'contrast',contrast}, {'do_correcttrials', do_correcttrials},{'do_smooth',do_smooth}, {'do_timeresolved', 1}, {'do_avgtrials', do_avgtrials}, {'do_prewhiten', true}, {'randnr', sprintf('%d',1)});
-    end
-    load(tmpfname)
-  end
-end
-
 %% loop over bins (only >1 when phasebinning)
 for bin = 1:size(trl,2)
   % select trial subset (when phasebinning)
   for itrltime = trltime
     cfg=[];
-    cfg.trials = trl{itrltime,bin}; % FIXME not yet implemented to have different trials for different time points
+    cfg.trials = trl{itrltime,bin}; 
     data = ft_selectdata(cfg, data_orig);
     
     %% Feature reduction (PCA)
@@ -169,8 +170,8 @@ for bin = 1:size(trl,2)
     end
     ntrials = min(ntrl);
     for k=1:numel(dat)
-      tmpidx = randperm(ntrl(k));
-      dat{k}.trial = dat{k}.trial(tmpidx(1:ntrials),:,:);
+      trlidx = randperm(ntrl(k));
+      dat{k}.trial = dat{k}.trial(trlidx(1:ntrials),:,:);
     end
     
     
@@ -187,8 +188,7 @@ for bin = 1:size(trl,2)
       groupsize = 5;
       ngroups = floor(ntrials/groupsize);
       for k=1:numel(dat)
-        randnum_trlavg = randperm(ntrl(k));
-        dat{k} = randavg_trials(dat{k}, ngroups, groupsize, randnum_trlavg);
+        dat{k} = randavg_trials(dat{k}, ngroups, groupsize);
       end
     else
       ngroups = ntrials;
@@ -196,31 +196,17 @@ for bin = 1:size(trl,2)
     
     % prewhiten with covariance matrix
     if do_prewhiten
+      % compute covariance on all data if necessary
       % get covariance matrix based on all trials
-      if getcov
-        [~, cov, cov_inv] = prewhiten_data(dat);
-        save(tmpfname, 'cov', 'cov_inv')
-        return
-      elseif do_phasebin
-        % use the covariance of the whole data
-        for k=1:numel(dat)
-          for t = 1:size(dat{k}.trial,3)
-            dat{k}.trial(:,:,t) = dat{k}.trial(:,:,t)*cov_inv;
-          end
-        end
-      else
-%         dat = prewhiten_data(dat);
-        [dat, cov] = prewhiten_data(dat);
-      end
+      [~, cov] = prewhiten_data(dat);
     else
       cov=[];
     end
     
-    
     %% decode
     % loop over time started higher up in case of do_binpertimepoint. if enet
     % is used, don't loop over time (this will be done in parallel jobs).
-    if do_enet && ~isempty(tbin)
+    if ~isempty(tbin)
       allt=tbin;
     elseif do_binpertimepoint
       allt=1;
@@ -232,71 +218,99 @@ for bin = 1:size(trl,2)
       if do_binpertimepoint
         cnt = itrltime;
       else
-        cnt = t;
+        if numel(allt)==1
+          cnt=1;
+        else
+          cnt = t;
+        end
       end
       
-      if do_enet
+      % randomize trials
+      randnum_trlorder = [];
+      for k=1:numel(dat)
+        randnum_trlorder(k,:) = randperm(ngroups);
+        dat{k}.trial = dat{k}.trial(randnum_trlorder(k,:),:,:);
+      end
+      
+      % prepare model
+      if do_enet && do_nestedcv
+        accuracy = [];
+        nfolds = 5;
+        l1_ratio_range = [.1, .3, .5, .7, .9, .95, 1];
         
-        % randomize trials
-        for k=1:numel(dat)
-          randnum_trlorder(k,:) = randperm(ngroups);
-          dat{k}.trial = dat{k}.trial(randnum_trlorder(k,:),:,:);
-        end
+        groupsize_out = floor(size(dat{1}.trial,1)/nfolds);
+        groupsize_out = repmat(groupsize_out, 1, nfolds);
+        rem = size(dat{1}.trial,1)-sum(groupsize_out);
+        groupsize_out = groupsize_out + [ones(1,rem), zeros(1,nfolds-rem)]; % some folds will have one more trial
         
-        
-        % prepare model
-        if do_nestedcv
-          nfolds_nstd = 5;
-          l1_ratio_range = [.1, .3, .5, .7, .9, .95, 1];
-          
-          % create folds (use all data, but only once)
-          groupsize_nstd = floor(size(dat{1}.trial,1)/nfolds_nstd);
-          groupsize_nstd = repmat(groupsize_nstd, 1, nfolds_nstd);
-          rem = size(dat{1}.trial,1)-sum(groupsize_nstd);
-          groupsize_nstd = groupsize_nstd + [ones(1,rem), zeros(1,nfolds_nstd-rem)]; % some folds will have one more trial
-          
-          for fold = 1:nfolds_nstd
-            [train_nstd, test_nstd, traindes_nstd] = enet_preparedata(dat, sum(groupsize_nstd(1,1:fold))-groupsize_nstd(fold)+1:sum(groupsize_nstd(1,1:fold)), cnt);
+        for fold_out = 1:nfolds
+          for fold_in = 1:nfolds-1
+            exclude_trials = sum(groupsize_out(1,1:fold_out))-groupsize_out(fold_out)+1:sum(groupsize_out(1,1:fold_out));
+            if do_prewhiten
+              tmpcov=cov;
+              tmpcov(exclude_trials,:,:)=[];
+            end
+            tmpdat = dat;
+            for ii=1:numel(tmpdat)
+              tmpdat{ii}.trial(exclude_trials,:,:) = [];
+            end
+            groupsize_in = groupsize_out;
+            groupsize_in(fold_out) = [];
+            [train_in, test_in, traindes_in, testdes_in] = dml_preparedata(tmpdat, sum(groupsize_in(1,1:fold_in))-groupsize_in(fold_in)+1:sum(groupsize_in(1,1:fold_in)), cnt, do_prewhiten, tmpcov);
             for nst = 1:numel(l1_ratio_range)
               model_nstd = dml.enet('family', 'binomial', 'df', 0, 'alpha', l1_ratio_range(nst));
-              model_nstd = model_nstd.train(train_nstd,traindes_nstd);
-              tmp = model_nstd.test(test_nstd);
-              acc_nstd(fold, nst) = mean([tmp(1:size(tmp,1)/2,1); tmp(size(tmp,1)/2+1:end,2)]);
+              model_nstd = model_nstd.train(train_in,traindes_in);
+              tmp = model_nstd.test(test_in);
+              acc_nstd(fold_in, nst) = mean([tmp(1:size(tmp,1)/2,1); tmp(size(tmp,1)/2+1:end,2)]);
             end
           end
           [~, maxidx] = max(mean(acc_nstd,1));
           l1_ratio = l1_ratio_range(maxidx);
-        else
-          l1_ratio = 0.1;
+          model = dml.enet('family', 'binomial', 'df', 0, 'alpha', l1_ratio);
+          
+          [train_outer, test_outer, traindes_outer, testdes_outer] = dml_preparedata(dat, sum(groupsize_out(1,1:fold_out))-groupsize_out(fold_out)+1:sum(groupsize_out(1,1:fold_out)), cnt, do_prewhiten, cov);
+          model = model.train(train_outer,traindes_outer);
+          tmpacc = model.test(test_outer);
+          for k=1:size(testdes_outer,1)
+            accuracy{bin,cnt}(k+size(testdes_outer,1)*(fold_out-1)) = tmpacc(k,testdes_outer(k));
+          end
         end
-        model = dml.enet('family', 'binomial', 'df', 0, 'alpha', l1_ratio);
+      else
+        if do_enet
+          l1_ratio = 0.1;
+          model = dml.enet('family', 'binomial', 'df', 0, 'alpha', l1_ratio);
+        else
+          model = dml.svm;
+        end
         
         % loop over trials: leave one trial out decoding
         for itrl=1:ngroups
-          [traindata, testdata, traindesign, testdesign] = enet_preparedata(dat, itrl, cnt);
+          itrl
+          [traindata, testdata, traindesign, testdesign] = dml_preparedata(dat, itrl, t, do_prewhiten, cov);
           model = model.train(traindata,traindesign);
           tmpacc = model.test(testdata);
           for k=1:numel(testdesign)
-            accuracy(bin, itrl+(k-1)*ngroups,cnt) = tmpacc(k,testdesign(k));
+            accuracy{bin, cnt}(itrl+(k-1)*ngroups) = tmpacc(k,testdesign(k));
           end
         end
         
-      else
-        cfgs=[];
-        cfgs.mva=  {dml.svm};
-        cfgs.method = 'crossvalidate';
-        cfgs.statistic = {'accuracy'};
-        cfgs.type= 'nfold';
-        cfgs.nfolds = ngroups;
-        cfgs.design = [ones(ngroups,1); 2*ones(ngroups,1)];
-        cfgs.latency = [toi(cnt) toi(cnt+nsample-1)];
-        stat(bin,cnt) = ft_timelockstatistics(cfgs,dat{1}, dat{2});
-        accuracy(bin,cnt) = stat(bin,cnt).statistic.accuracy;
+        %       else
+        %
+        %         cfgs=[];
+        %         cfgs.mva=  {dml.svm};
+        %         cfgs.method = 'crossvalidate';
+        %         cfgs.statistic = {'accuracy'};
+        %         cfgs.type= 'nfold';
+        %         cfgs.nfolds = ngroups;
+        %         cfgs.design = [ones(ngroups,1); 2*ones(ngroups,1)];
+        %         cfgs.latency = [toi(cnt) toi(cnt+nsample-1)];
+        %         stat(bin,cnt) = ft_timelockstatistics(cfgs,dat{1}, dat{2});
+        %         accuracy(bin,cnt) = stat(bin,cnt).statistic.accuracy;
+        %       end
       end
     end
   end
 end
-
 vararg = [];
 % make filename
 filename = '/project/3011085.02/phasecode/results/';
@@ -309,8 +323,15 @@ else
   filename = [filename, 'svm/'];
 end
 filename = [filename, sprintf('sub%02d_decoding', subj)];
+if do_phasealign
+  filename = [filename, '_phasealign'];
+end
+
+if exist('tbin', 'var') && ~isempty(tbin)
+  filename = [filename, sprintf('_%d', tbin)];
+end
 if exist('randnr', 'var')
-  filename = [filename, sprintf('_%d', str2num(randnr))];
+  filename = [filename, sprintf('_%d', randnr)];
 end
 
 % save variables

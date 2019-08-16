@@ -1,18 +1,11 @@
-function [traindata, testdata, traindesign, testdesign] = enet_preparedata(data, trlnum, tpoint, do_prewhiten, cov)
+function [traindata, testdata, traindesign, testdesign] = dml_preparedata(data, trlnum, tpoint, do_prewhiten, cov)
 if ~exist('do_prewhiten', 'var'), do_prewhiten = false; end
 
 ntrl = size(data{1}.trial,1);
  
-cfg=[];
 for k=1:numel(data)
-  cfg.trials = trlnum;
-  cfg.latency = [data{k}.time(tpoint) data{k}.time(tpoint)];
-  testdata{k} = ft_selectdata(cfg, data{k});
-  testdata{k} = testdata{k}.trial;
-  
-  cfg.trials = setdiff(1:ntrl, trlnum);
-  traindata{k} = ft_selectdata(cfg, data{k});
-  traindata{k} = traindata{k}.trial;
+  testdata{k} = data{k}.trial(trlnum, :, tpoint);
+  traindata{k} = data{k}.trial(setdiff(1:ntrl, trlnum), :, tpoint);
 end
 
 if do_prewhiten % prewhiten only based on the training set
