@@ -1,15 +1,21 @@
-function [traindata, testdata, traindesign, testdesign] = dml_preparedata(data, trlnum, tpoint, do_prewhiten, cov)
+function [traindata, testdata, traindesign, testdesign] = dml_preparedata(data, trlnum, tpoint, do_prewhiten)
 if ~exist('do_prewhiten', 'var'), do_prewhiten = false; end
 
 ntrl = size(data{1}.trial,1);
  
 for k=1:numel(data)
   testdata{k} = data{k}.trial(trlnum, :, tpoint);
-  traindata{k} = data{k}.trial(setdiff(1:ntrl, trlnum), :, tpoint);
+  data{k}.trial = data{k}.trial(setdiff(1:ntrl, trlnum), :, :);
+  traindata{k} = data{k}.trial(:,:,tpoint);
 end
 
-if do_prewhiten % prewhiten only based on the training set
-  cov = squeeze(mean(cov(setdiff(1:ntrl, trlnum),:,:),1));
+if do_prewhiten % prewhiten only based on the training set. prewhiten over trials, potentially average over time
+  for k=1:numel(data)
+    data{k}.trial = permute(data{k}.trial(:,:,:), [3 2 1]);
+    data{k}.time = 1:size(data{k}.trial,3);
+  end
+  [~, cov] = prewhiten_data(data);
+    cov = squeeze(mean(cov,1));
   cov_inv = cov^-0.5;
   for k=1:numel(data)
     traindata{k} = traindata{k}*cov_inv;

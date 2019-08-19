@@ -231,19 +231,6 @@ for bin = 1:numel(unique(phasebin(:)))
     end
     
     if do_collapsephasebin
-      if do_prewhiten
-        warning('prewhitening not yet implemented')
-        do_prewhiten=0;
-        cov=[]
-        % not yet implemented. Unclear how. After reshaping there is no
-        % time demension for computing the covariance. But prewhitening
-        % should be done only on training data. Not possible after
-        % averaging data because time is treated as another observation
-        % (i.e. a trial).
-        %         [~, cov] = prewhiten_data(dat);
-      else
-        cov=[];
-      end
       nchan = size(dat{1}.trial,2);
       for k=1:numel(dat)
         dat{k}.time = 1;
@@ -281,15 +268,10 @@ for bin = 1:numel(unique(phasebin(:)))
     end
     
     % prewhiten with covariance matrix
-    if ~do_collapsephasebin
-      if do_prewhiten
-        % compute covariance on all data if necessary
-        % get covariance matrix based on all trials
-        [~, cov] = prewhiten_data(dat);
-      else
-        cov=[];
-      end
-    end
+    % this is moved to dml_preparedata because covariance should be
+    % computed over trials, not time. Thus, covariance should be computed
+    % for every fold (Guggenmos et al 2018).
+
     %% decode
     % loop over time started higher up in case of do_binpertimepoint. if enet
     % is used, don't loop over time (this will be done in parallel jobs).
@@ -328,8 +310,8 @@ for bin = 1:numel(unique(phasebin(:)))
           for fold_in = 1:nfolds-1
             exclude_trials = sum(groupsize_out(1,1:fold_out))-groupsize_out(fold_out)+1:sum(groupsize_out(1,1:fold_out));
             if do_prewhiten
-              tmpcov=cov;
-              tmpcov(exclude_trials,:,:)=[];
+              % not implemented
+              do_prewhiten=0;
             end
             tmpdat = dat;
             for ii=1:numel(tmpdat)
@@ -337,7 +319,7 @@ for bin = 1:numel(unique(phasebin(:)))
             end
             groupsize_in = groupsize_out;
             groupsize_in(fold_out) = [];
-            [train_in, test_in, traindes_in, testdes_in] = dml_preparedata(tmpdat, sum(groupsize_in(1,1:fold_in))-groupsize_in(fold_in)+1:sum(groupsize_in(1,1:fold_in)), cnt, do_prewhiten, tmpcov);
+            [train_in, test_in, traindes_in, testdes_in] = dml_preparedata(tmpdat, sum(groupsize_in(1,1:fold_in))-groupsize_in(fold_in)+1:sum(groupsize_in(1,1:fold_in)), cnt, do_prewhiten);
             for nst = 1:numel(l1_ratio_range)
               model_nstd = dml.enet('family', 'binomial', 'df', 0, 'alpha', l1_ratio_range(nst));
               model_nstd = model_nstd.train(train_in,traindes_in);
@@ -349,7 +331,7 @@ for bin = 1:numel(unique(phasebin(:)))
           l1_ratio = l1_ratio_range(maxidx);
           model = dml.enet('family', 'binomial', 'df', 0, 'alpha', l1_ratio);
           
-          [train_outer, test_outer, traindes_outer, testdes_outer] = dml_preparedata(dat, sum(groupsize_out(1,1:fold_out))-groupsize_out(fold_out)+1:sum(groupsize_out(1,1:fold_out)), cnt, do_prewhiten, cov);
+          [train_outer, test_outer, traindes_outer, testdes_outer] = dml_preparedata(dat, sum(groupsize_out(1,1:fold_out))-groupsize_out(fold_out)+1:sum(groupsize_out(1,1:fold_out)), cnt, do_prewhiten);
           model = model.train(train_outer,traindes_outer);
           tmpacc = model.test(test_outer);
           for k=1:size(testdes_outer,1)
@@ -376,9 +358,9 @@ for bin = 1:numel(unique(phasebin(:)))
         % loop over trials: leave one trial out decoding
         for itrl=1:nfolds
           if do_collapsephasebin
-            [traindata, testdata, traindesign, testdesign] = dml_preparedata(dat, sum(groupsize(1,1:itrl))-groupsize(itrl)+1:sum(groupsize(1,1:itrl)), cnt, do_prewhiten, cov);
+            [traindata, testdata, traindesign, testdesign] = dml_preparedata(dat, sum(groupsize(1,1:itrl))-groupsize(itrl)+1:sum(groupsize(1,1:itrl)), cnt, do_prewhiten);
           else
-            [traindata, testdata, traindesign, testdesign] = dml_preparedata(dat, itrl, cnt, do_prewhiten, cov);
+            [traindata, testdata, traindesign, testdesign] = dml_preparedata(dat, itrl, cnt, do_prewhiten);
           end
           model = model.train(traindata,traindesign);
           primal{bin}(itrl, cnt, :) = model.primal;
