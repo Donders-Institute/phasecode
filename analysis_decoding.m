@@ -166,6 +166,8 @@ else
     clear tmp
   end
 end
+
+cov=[];
 %% loop over bins (only >1 when phasebinning)
 for bin = 1:numel(unique(phasebin(:)))
   % select trial subset (when phasebinning)
@@ -356,11 +358,14 @@ for bin = 1:numel(unique(phasebin(:)))
         end
         
         % loop over trials: leave one trial out decoding
-        for itrl=1:nfolds
+        for itrl=1:nfolds   
           if do_collapsephasebin
             [traindata, testdata, traindesign, testdesign] = dml_preparedata(dat, sum(groupsize(1,1:itrl))-groupsize(itrl)+1:sum(groupsize(1,1:itrl)), cnt, do_prewhiten);
           else
-            [traindata, testdata, traindesign, testdesign] = dml_preparedata(dat, itrl, cnt, do_prewhiten);
+            if numel(cov)<itrl || isempty(cov{itrl})
+              cov{itrl} = [];
+            end
+            [traindata, testdata, traindesign, testdesign, cov{itrl}] = dml_preparedata(dat, itrl, cnt, do_prewhiten, cov{itrl});
           end
           model = model.train(traindata,traindesign);
           primal{bin}(itrl, cnt, :) = model.primal;
