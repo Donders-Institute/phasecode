@@ -74,7 +74,7 @@ else
   centerphase = 0;
 end
 if do_collapsephasebin
-  filename = [projectdir, 'results/phase/', sprintf('sub%02d_phase2_%d', subj, f(1))];
+  filename = [projectdir, 'results/phase/', sprintf('sub%02d_phase_%d', subj, f(1))];
   load(filename)
   phasebin(~cfg.trials,:)=[];
   phase(~cfg.trials,:)=[];
