@@ -36,7 +36,7 @@ phase = zeros(s1,s4,s3);
 for k=1:s1
   for l=1:s3
     t2 = find(isnan(squeeze(freq.fourierspctrm(k,1,l,:))), 1);
-    [u, s, v] = svd(squeeze(freq.fourierspctrm(k,:,l,1:min([t2-1, s4]))), 'econ');
+    [u, s, v] = svd(squeeze(real(freq.fourierspctrm(k,:,l,1:min([t2-1, s4])))), 'econ');
     phase(k,:,l) = u(:,1)'*squeeze(freq.fourierspctrm(k,:,l,:));
   end
 end
