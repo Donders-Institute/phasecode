@@ -2,8 +2,8 @@ function [phasebin, phase, dist] = analysis_phase(subj, f, centerphase)
 % This function loads the original data and for each trial and frequency
 % find the angle over time. It categorizes each trial-freq-timepoint in a
 % phasebin and saves this info to disk.
-if ~exist('centerphase', 'var') || nargin<3
-  centerphase = [0 0.5 1 1.5]*pi;
+if ~exist('centerphase', 'var') || nargin<3 || isempty(centerphase)
+  centerphase = [0 1/3 2/3 1 4/3 5/3]*pi;
 end
 
 datainfo;
