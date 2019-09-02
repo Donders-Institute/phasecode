@@ -254,6 +254,7 @@ for bin = 1:numel(unique(phasebin(:)))
         nsamp_cond(k) = sum(phasebin_cond{k}==bin);
       end
       nsamp = min(nsamp_cond);
+      n_samp_in_bin(bin) = nsamp;
       
       for k=1:numel(phasebin_cond)
         dat{k}.trial = dat{k}.trial(phasebin_cond{k}==bin,:); % select samples with particular phase
@@ -450,5 +451,5 @@ if do_phasebin
   save(filename, 'phase', 'trl', '-append');
 end
 if do_randphasebin
-  save(filename, 'phasebin', '-append');
+  save(filename, 'phasebin', 'n_samp_in_bin', '-append');
 end
