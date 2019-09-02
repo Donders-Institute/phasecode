@@ -21,6 +21,7 @@ randnr              = ft_getopt(varargin, 'randnr',              []);
 tbin                = ft_getopt(varargin, 'tbin',                []);
 hemi                = ft_getopt(varargin, 'hemi',                1);
 f                   = ft_getopt(varargin, 'f',                   10);
+do_randphasebin     = ft_getopt(varargin, 'do_randphasebin',     false);
 
 if do_collapsephasebin, do_timeresolved = false; end
 
@@ -48,18 +49,25 @@ end
 fs = data.fsample;
 
 % Split up conditions
+cfg=[];
 switch contrast
   case 'congruent'
     idx(1,:) = 11;
     idx(2,:) = 14;
+    cfg.trials = ismember(data.trialinfo(:,2), idx);
   case 'attended'
     tmpidx{1} = [11 12; 11 13]; % CW:  first row corresponds to left, second to right hemifield
     tmpidx{2} = [13 14; 12 14];
     idx(1,:) = tmpidx{1}(hemi,:);
     idx(2,:) = tmpidx{2}(hemi,:);
+    cfg.trials = ismember(data.trialinfo(:,2), idx) & data.trialinfo(:,1)==hemi;
+  case 'unattended'
+    tmpidx{1} = [11 12; 11 13]; % CW:  first row corresponds to left, second to right hemifield
+    tmpidx{2} = [13 14; 12 14];
+    idx(1,:) = tmpidx{1}(hemi,:);
+    idx(2,:) = tmpidx{2}(hemi,:);
+    cfg.trials = ismember(data.trialinfo(:,2), idx) & data.trialinfo(:,1)~=hemi;
 end
-cfg=[];
-cfg.trials = ismember(data.trialinfo(:,2), idx);
 data = ft_selectdata(cfg, data);
 
 if do_phasealign
@@ -78,6 +86,9 @@ if do_collapsephasebin
   load(filename)
   phasebin(~cfg.trials,:)=[];
   phase(~cfg.trials,:)=[];
+  if do_randphasebin
+    phasebin = reshape(phasebin(randperm(numel(phasebin))), [size(phasebin,1) size(phasebin,2)]);
+  end
 else
   [phasebin, phase, distance, time] = analysis_alphaphase(data, bpfreq, centerphase, lat);
 end
@@ -400,13 +411,25 @@ else
   filename = [filename, 'svm/'];
   vararg.primal = primal;
 end
+switch contrast
+  case 'congruent'
+    filename = [filename, 'congruent/'];
+  case 'attended'
+    filename = [filename, 'attended/'];
+  case 'unattended'
+    filename = [filename, 'unattended/'];
+end
 filename = [filename, sprintf('sub%02d_decoding', subj)];
+if do_randphasebin
+  filename = [filename, '_rand'];
+end
+if strcmp(contrast, 'attended')
+  filename = [filename, sprintf('_hemi%d', hemi)];
+end
 if do_collapsephasebin
   filename = [filename, sprintf('_f%d', f)];
 end
-if strcmp(contrast, 'attended')
-  filename = [filename, sprintf('_hemi%d')];
-end
+
 if do_phasealign
   filename = [filename, '_phasealign'];
 end
@@ -425,4 +448,7 @@ if ~exist('primal', 'var'), primal=[]; end
 save(filename, 'accuracy','settings', 'primal')
 if do_phasebin
   save(filename, 'phase', 'trl', '-append');
+end
+if do_randphasebin
+  save(filename, 'phasebin', '-append');
 end
