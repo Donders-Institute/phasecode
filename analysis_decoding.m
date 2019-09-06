@@ -87,7 +87,7 @@ if do_collapsephasebin
   phasebin(~cfg.trials,:)=[];
   phase(~cfg.trials,:)=[];
   if do_randphasebin
-    phasebin = reshape(phasebin(randperm(numel(phasebin))), [size(phasebin,1) size(phasebin,2)]);
+    phasebin = reshape(phasebin(randperm(size(phasebin,1)),:), [size(phasebin,1) size(phasebin,2)]);
   end
 else
   [phasebin, phase, distance, time] = analysis_alphaphase(data, bpfreq, centerphase, lat);
@@ -424,7 +424,7 @@ filename = [filename, sprintf('sub%02d_decoding', subj)];
 if do_randphasebin
   filename = [filename, '_rand'];
 end
-if strcmp(contrast, 'attended')
+if strcmp(contrast, 'attended') || strcmp(contrast, 'unattended')
   filename = [filename, sprintf('_hemi%d', hemi)];
 end
 if do_collapsephasebin
