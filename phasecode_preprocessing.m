@@ -11,6 +11,7 @@ if numel(x1)>3 % MEG system had to be rebooted within 1 session
     tmp = num2str(x1(k));
     x2(k) = str2num(tmp(1));
   end
+else x2=x1;
 end
 s = find(x2==ses);
 
@@ -153,7 +154,9 @@ artifact_visual = artifact_EOG;
   tmpartfctdef{ises} = artfctdef;
   % remove trials with high variance
   cfg=[];
-  cfg.trials = find(~ismember([1:numel(dat{ises}.trial)], artfctdef.badtrial));
+  try
+    cfg.trials = find(~ismember([1:numel(dat{ises}.trial)], artfctdef.badtrial));
+  end
   dat{ises} = ft_selectdata(cfg, dat{ises});
   
   % Reject muslce and jump artifacts from complete data
