@@ -32,18 +32,16 @@ rng('shuffle');
 % load data
 datainfo;
 if do_allses
-  for k=1:numel(subjects(subj).sessions)
-    ses = subjects(subj).sessions(k);
-    filename = [datadir, sprintf('3016045.07_matves_%03d_%03d', subj, ses), '/cleandata.mat'];
-    filename = [projectdir, sprintf('data/sub%02d/sub%02d-meg%02d/sub%02d-meg%02d_cleandata.mat', subj, subj, ses, subj, ses)];
-    tmp{k} = load(filename, 'data');
-    tmp{k} = tmp{k}.data;
+  for ses=1:3 %numel(subjects(subj).sessions)
+    filename = [datadir, sprintf('sub%02d/meg%02d/sub%02d-meg%02d_cleandata.mat', subj, ses, subj, ses)];
+    tmp{ses} = load(filename, 'data');
+    tmp{ses} = tmp{ses}.data;
   end
   data = ft_appenddata([], tmp{:});
   data.grad = tmp{1}.grad;
   clear tmp
 else
-  filename = [projectdir, sprintf('data/sub%02d/sub%02d-meg%02d/sub%02d-meg%02d_cleandata.mat', subj, subj, ses, subj, ses)];
+  filename = [datadir, sprintf('sub%02d/meg%02d/sub%02d-meg%02d_cleandata.mat', subj, ses, subj, ses)];
   load(filename, 'data');
 end
 fs = data.fsample;
