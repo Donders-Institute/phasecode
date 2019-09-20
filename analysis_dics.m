@@ -14,29 +14,11 @@ headmodel = ft_convert_units(headmodel, 'm');
 sourcemodel = ft_convert_units(sourcemodel, 'm');
 
 %% load MEG data
-x = subjects(subj).sessions;
-for k=1:numel(x)
-  ses = subjects(subj).sessions(k);
-  filename = [datadir, sprintf('3016045.07_matves_%03d_%03d', subj, ses), '/cleandata.mat'];
-  filename = [projectdir, sprintf('data/sub%02d/meg%02d/sub%02d-meg%02d_cleandata.mat', subj, ses, subj, ses)];
-  dat{k} = load(filename, 'data');
-  dat{k} = dat{k}.data;
+for ses=1:3
+  filename = [datadir, sprintf('sub%02d/meg%02d/sub%02d-meg%02d_cleandata.mat', subj, ses, subj, ses)];
+  dat{ses} = load(filename, 'data');
+  dat{ses} = dat{ses}.data;
 end
-
-% concatenate those datasets that belong to the same sessions
-if numel(x)>3 % MEG system had to be rebooted within 1 session
-  for k=1:numel(x)
-    tmp = num2str(x(k));
-    x(k) = str2num(tmp(1));
-  end
-  for k=1:3
-    idx = find(x==k);
-    tmpdat{k} = ft_appenddata([], dat{idx});
-    tmpdat{k}.grad = dat{idx(1)}.grad;
-  end
-  dat = tmpdat;
-end
-
 
 % prepare configurations and variables
 fs = dat{1}.fsample;
@@ -51,6 +33,12 @@ cfgf.foi = f;
 
 for k=1:3
   data=dat{k};
+
+% if you want a hemisphere specific source, use the following.  
+%   cfg=[];
+%   cfg.trials = data.trialinfo(:,1)==1; % for left, 2 for right hemifield
+% %   attention
+%   data = ft_selectdata(cfg, data);
   
   cfg=[];
   cfg.toilim = [-1+1/fs 0];
@@ -76,7 +64,7 @@ for k=1:3
   cfg.method          = 'dics';
   cfg.frequency       = f;
   cfg.headmodel       = headmodel;
-  cfg.sourcemodel     = sourcemodel_{k};
+  cfg.sourcemodel     = sourcemodel_ses{k};
   cfg.dics.keepfilter = 'yes';
   cfg.dics.fixedori   = 'yes';
   cfg.dics.realfilter = 'yes';
@@ -134,4 +122,4 @@ Tval = ft_sourcestatistics(cfg, pow_stim, pow_bl);
 
 [~, maxidx] = max(Tval.stat);
 
-save([projectdir, sprintf('results/freq/sub%02d_dics_gamma', subj)], 'maxidx', 'Tval', 'pow_stim', 'pow_bl', 'sourcemodel_ses');
+save([projectdir, sprintf('results/freq/sub%02d_dics_gamma', subj)], 'maxidx', 'Tval', 'pow_stim', 'pow_bl', 'sourcemodel_ses', 'dicsfilter');
