@@ -17,29 +17,11 @@ end
 
 
 %% load MEG data
-x = subjects(subj).sessions;
-for k=1:numel(x)
-  ses = subjects(subj).sessions(k);
-  filename = [datadir, sprintf('3016045.07_matves_%03d_%03d', subj, ses), '/cleandata.mat'];
-  filename = [projectdir, sprintf('data/sub%02d/meg%02d/sub%02d-meg%02d_cleandata.mat', subj, ses, subj, ses)];
-  dat{k} = load(filename, 'data');
-  dat{k} = dat{k}.data;
+for ses=1:3
+  filename = [datadir, sprintf('sub%02d/meg%02d/sub%02d-meg%02d_cleandata.mat', subj, ses, subj, ses)];
+  dat{ses} = load(filename, 'data');
+  dat{ses} = dat{ses}.data;
 end
-
-% concatenate those datasets that belong to the same sessions
-if numel(x)>3 % MEG system had to be rebooted within 1 session
-  for k=1:numel(x)
-    tmp = num2str(x(k));
-    x(k) = str2num(tmp(1));
-  end
-  for k=1:3
-    idx = find(x==k);
-    tmpdat{k} = ft_appenddata([], dat{idx});
-    tmpdat{k}.grad = dat{idx(1)}.grad;
-  end
-  dat = tmpdat;
-end
-
 
 % prepare configurations and variables
 fs = dat{1}.fsample;
@@ -64,25 +46,25 @@ for k=1:3
   tlck_cov                   = ft_timelockanalysis(cfg, data); % use this for lcmv
   
   % prepare anatomical data with session specific leadfields
-  cfg               = [];
-  cfg.headmodel     = headmodel;
-  cfg.grid          = sourcemodel;
-  cfg.grad          = ft_convert_units(tlck.grad, 'm');
-  cfg.channel       = tlck.label;
-  tmpsourcemodel{k} = ft_prepare_leadfield(cfg);
+  cfg                = [];
+  cfg.headmodel      = headmodel;
+  cfg.grid           = sourcemodel;
+  cfg.grad           = ft_convert_units(tlck.grad, 'm');
+  cfg.channel        = tlck.label;
+  sourcemodel_ses{k} = ft_prepare_leadfield(cfg);
   
-  cfg = [];
-  cfg.method = 'lcmv';
-  cfg.headmodel = headmodel;
-  cfg.grid      = tmpsourcemodel{k};
-  cfg.keepleadfield = 'yes';
-  cfg.lcmv.keepfilter = 'yes';
-  cfg.lcmv.fixedori   = 'yes';
-  cfg.lcmv.lambda     = '100%';
+  cfg                    = [];
+  cfg.method             = 'lcmv';
+  cfg.headmodel          = headmodel;
+  cfg.sourcemodel        = sourcemodel_ses{k};
+  cfg.keepleadfield      = 'yes';
+  cfg.lcmv.keepfilter    = 'yes';
+  cfg.lcmv.fixedori      = 'yes';
+  cfg.lcmv.lambda        = '100%';
   cfg.lcmv.keepleadfield = 'yes';
-  cfg.lcmv.keepori = 'yes';
-  cfg.lcmv.weightnorm = 'unitnoisegain';
-  source = ft_sourceanalysis(cfg, tlck_cov);
+  cfg.lcmv.keepori       = 'yes';
+  cfg.lcmv.weightnorm    = 'unitnoisegain';
+  source                 = ft_sourceanalysis(cfg, tlck_cov);
   
   sesF      = zeros(size(source.pos,1),numel(tlck_cov.label));
   sesF(source.inside,:) = cat(1,source.avg.filter{:});
@@ -103,6 +85,8 @@ for k=1:3
     virtualchan = tmpvirtualchan;
   else
     virtualchan.trial = [virtualchan.trial; tmpvirtualchan.trial];
+    virtualchan.trialinfo = [virtualchan.trialinfo; tmpvirtualchan.trialinfo];
+    virtualchan.sampleinfo = [virtualchan.sampleinfo; tmpvirtualchan.sampleinfo];    
   end 
 end
 
