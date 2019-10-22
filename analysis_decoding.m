@@ -214,7 +214,16 @@ for bin = 1:numel(unique(phasebin(:)))
     for k=1:size(idx,1)
       cfg=[];
       cfg.trials = ismember(data.trialinfo(:,2), idx(k,:));
-      dat{k} = ft_selectdata(cfg, data);
+      if iscell(data.trial)
+        % use the following code to speed op computation
+        dat{k} = data;
+        dat{k}.trial = dat{k}.trial(cfg.trials);
+        dat{k}.time = dat{k}.time(cfg.trials);
+        dat{k}.trialinfo = dat{k}.trialinfo(cfg.trials,:);
+        dat{k}.sampleinfo = dat{k}.sampleinfo(cfg.trials,:);
+      else
+        dat{k} = ft_selectdata(cfg, data);
+      end
       phasebin_cond{k} = phasebin(cfg.trials,:);
     end
     
@@ -222,7 +231,13 @@ for bin = 1:numel(unique(phasebin(:)))
     cfg=[];
     cfg.keeptrials = 'yes';
     for k=1:numel(dat)
-      dat{k} = ft_timelockanalysis(cfg, dat{k});
+      try % save some time by not using fieldtrip function (only works if all trials have the same time axis)
+        dat{k}.trial = permute(cat(3, dat{k}.trial{:}), [3 1 2]);
+        dat{k}.time = dat{k}.time{1};
+        dat{k}.dimord = 'rpt_chan_time';
+      catch
+        dat{k} = ft_timelockanalysis(cfg, dat{k});
+      end
       ntrl(k) = size(dat{k}.trial,1);
     end
     ntrials = min(ntrl);
@@ -443,7 +458,7 @@ end
 % save variables
 settings = struct('allses', do_allses, 'avgtrials', do_avgtrials, 'baselinecorrect', do_baselinecorrect,'binpertimepoint', do_binpertimepoint,'correcttrials', do_correcttrials, 'enet', do_enet, 'nestedcv', do_nestedcv, 'pca', do_pca, 'phasealign', do_phasealign, 'phasebin', do_phasebin, 'contrast', contrast,'prewhiten', do_prewhiten, 'smooth', do_smooth,'timeresolved', do_timeresolved, 'var', vararg);
 if ~exist('primal', 'var'), primal=[]; end
-
+profile off
 save(filename, 'accuracy','settings', 'primal')
 if do_phasebin
   save(filename, 'phase', 'trl', '-append');
