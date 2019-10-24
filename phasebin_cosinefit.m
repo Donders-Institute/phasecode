@@ -1,10 +1,11 @@
-
-freqs = [4:1:30 32:2:80];
-numrand = 50;
+% initialize parameters
+freqs = 7:10%[4:1:30 32:2:80];
+nperm = 50;
+nrandperm = 500;
 subj=4;
 centerphase = [0 1/3 2/3 1 4/3 5/3]*pi-pi;
 resultsdir = '/project/3011085.02/phasecode/results/collapsephasebin/';
-contrast = 'congruent';
+contrast = 'attended';
 hemis=[1];
 
 for h=hemis
@@ -14,58 +15,61 @@ for h=hemis
     hemi = [];
   end
   
+  % load the decoding results for every frequency and randomization.
   cnt=1;
   for f=freqs
-    for ii = 1:numrand
-      try
-        tmp{cnt,ii} = load([resultsdir, sprintf('%s/sub%02d_decoding_%sf%d_%d', contrast, subj, hemi, f, ii)]);
-        tmp{cnt,ii} = mean(tmp{cnt,ii}.accuracy,2);
-      catch
-        sprintf('missing f%d, rand %d', f, ii)
-      end
-      try
-        tmp2{cnt,ii} = load([resultsdir, sprintf('%s/sub%02d_decoding_rand_%sf%d_%d', contrast, subj, hemi, f, ii)]);
-        tmp2{cnt,ii} = mean(tmp2{cnt,ii}.accuracy,2);
-      catch
-        sprintf('missing randperm f%d, rand %d', f, ii)
-      end
+    for ii = 1:nperm
+      tmp{cnt,ii} = load([resultsdir, sprintf('%s/sub%02d_decoding_%sf%d_%d', contrast, subj, hemi, f, ii)]);
+      tmp{cnt,ii} = mean(tmp{cnt,ii}.accuracy,2);
+    end
+    
+    % now do the same for random permutations
+    for ii = 1:nrandperm
+      tmp2{cnt,ii} = load([resultsdir, sprintf('%s/sub%02d_decoding_rand_%sf%d_%d', contrast, subj, hemi, f, ii)]);
+      tmp2{cnt,ii} = mean(tmp2{cnt,ii}.accuracy,2);
     end
     cnt=cnt+1;
   end
   
   for k=1:size(tmp,1)
-    for ii=1:numrand
+    for ii=1:nperm
       A(ii,:,k) = tmp{k,ii};
+    end
+    for ii=1:nrandperm
       B(ii,:,k) = tmp2{k,ii};
     end
   end
   % clear tmp tmp2
   
+  % shape accuracy per phase bin into fieldtrip structure.
   dat{h}=[];
   dat{h}.dimord = 'rpt_chan_freq';
   dat{h}.freq = freqs;
   dat{h}.trial=permute(A,[2 1 3]);
-  for k = 1:numrand
+  for k = 1:nperm
     dat{h}.label{k}=sprintf('accuracy%03d',k);
   end
   
   randdat{h} = dat{h};
   randdat{h}.trial = permute(B, [2,1,3]);
+  for k = 1:nrandperm
+    randdat{h}.label{k}=sprintf('accuracy%03d',k);
+  end
   
   design = centerphase;
   tmpdat=reshape(dat{h}.trial,6,[])';
   tmpcfg=[];
   tmpcfg.cosinefit.statistic='complex';
   s{h}=statfun_cosinefit(tmpcfg,tmpdat,design);
-  stat{h} = reshape(s{h}.stat, [numrand, numel(freqs)]);
-  r{h} = reshape(s{h}.r, [numrand, numel(freqs)]);
-  offset{h} = reshape(s{h}.offset, [numrand, numel(freqs)]);
+  stat{h} = reshape(s{h}.stat, [nperm, numel(freqs)]);
+  r{h} = reshape(s{h}.r, [nperm, numel(freqs)]);
+  offset{h} = reshape(s{h}.offset, [nperm, numel(freqs)]);
   
   tmpdat=reshape(randdat{h}.trial,6,[])';
   srand{h}=statfun_cosinefit(tmpcfg,tmpdat,design);
-  statrand{h} = reshape(srand{h}.stat, [numrand, numel(freqs)]);
-  rrand{h} = reshape(srand{h}.r, [numrand, numel(freqs)]);
-  offsetrand{h} = reshape(srand{h}.offset, [numrand, numel(freqs)]);
+  statrand{h} = reshape(srand{h}.stat, [nrandperm, numel(freqs)]);
+  rrand{h} = reshape(srand{h}.r, [nrandperm, numel(freqs)]);
+  offsetrand{h} = reshape(srand{h}.offset, [nperm, numel(freqs)]);
 end
 % tmpdat=reshape(randdat.trial,6,[])';
 % for k=1:2600
