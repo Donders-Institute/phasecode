@@ -8,7 +8,7 @@ end
 
 datainfo;
 load([projectdir, sprintf('results/tlck/sub%02d_virtualchan', subj)], 'virtualchan')
-
+addpath('/project/3011085.02/phasecode/scripts/CircStat/');
 
 fs = 200;
 % mtmconvol
@@ -20,9 +20,10 @@ cfg.foi = f;
 cfg.pad = 4;
 cfg.output = 'fourier';
 cfg.t_ftimwin = numcycles*1./cfg.foi;
-cfg.toi = 1./fs:1./fs:1.2;
+cfg.toi = 1./fs:1./fs:1.2-(numcycles/2*1/f)-1/fs;
 cfg.keeptrials = 'yes';
 freq = ft_freqanalysis(cfg, virtualchan);
+time = cfg.toi;
 
 [s1,s2,s3,s4] = size(freq.fourierspctrm);
 
@@ -35,5 +36,5 @@ dist = reshape(dist, size(phase));
 phasebin = reshape(phasebin, size(phase));
 
 filename = [projectdir, 'results/phase/', sprintf('sub%02d_phase_%d', subj, f(1))];
-save(filename, 'centerphase', 'phase', 'phasebin');
+save(filename, 'centerphase', 'phase', 'phasebin', 'time');
 
