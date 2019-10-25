@@ -28,18 +28,11 @@ freq = ft_freqanalysis(cfg, virtualchan);
 
 phase = angle(squeeze(freq.fourierspctrm))+pi;
 
-tmpcenterphase = [centerphase 2*pi];
-phasebin = zeros(s1, s4, s3);
-dist = zeros(s1, s4, s3);
-for l=1:s3
-  for k=1:s4
-    ptmp = squeeze(phase(:,k,l));
-    [tmpdist, idx] = min(transpose(abs(ptmp-tmpcenterphase))); % distance to center phases.
-    idx(idx==max(idx)) = min(idx); % smallest and largest angles are the same.
-    dist(:,k,l) = tmpdist;
-    phasebin(:,k,l) = idx;
-  end
+for l=1:numel(phase)
+  [dist(l), phasebin(l)] = min(abs(circ_dist(phase(l), centerphase)));
 end
+dist = reshape(dist, size(phase));
+phasebin = reshape(phasebin, size(phase));
 
 filename = [projectdir, 'results/phase/', sprintf('sub%02d_phase_%d', subj, f(1))];
 save(filename, 'centerphase', 'phase', 'phasebin');
