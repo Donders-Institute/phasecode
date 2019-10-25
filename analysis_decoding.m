@@ -149,6 +149,7 @@ if do_correcttrials
   phasebin(rmtrials,:,:)=[];
 end
 data_orig=data;
+nbins = numel(unique(phasebin(:)));
 
 % If phasebinning and changing bin per time point, loop over time points.
 % If phasebinning and not changing bin per time point, make all bins
@@ -177,8 +178,10 @@ else
 end
 
 cov=[];
-%% loop over bins (only >1 when phasebinning)
-for bin = 1:numel(unique(phasebin(:)))
+
+%% Prepare all data.
+% loop over bins (only >1 when phasebinning)
+for bin = 1:nbins
   % select trial subset (when phasebinning)
   for itrltime = trltime
     if ~do_collapsephasebin
@@ -267,11 +270,11 @@ for bin = 1:numel(unique(phasebin(:)))
         nsamp_cond(k) = sum(phasebin_cond{k}==bin);
       end
       nsamp = min(nsamp_cond);
-      n_samp_in_bin(bin) = nsamp;
       
       for k=1:numel(phasebin_cond)
-        dat{k}.trial = dat{k}.trial(phasebin_cond{k}==bin,:); % select samples with particular phase
-        phasebin_cond{k} = phasebin_cond{k}(phasebin_cond{k}==bin,:); % do the same with sample matrix
+        sampinbin = phasebin_cond{k}==bin; % select samples with particular phase
+        dat{k}.trial = dat{k}.trial(sampinbin,:); 
+        phasebin_cond{k} = phasebin_cond{k}(sampinbin,:); % do the same with sample matrix
         r = randperm(nsamp_cond(k));
         dat{k}.trial = dat{k}.trial(r(1:nsamp),:); % select the same amount of samples for all conditions
         phasebin_cond{k} = phasebin_cond{k}(r(1:nsamp));
@@ -294,14 +297,45 @@ for bin = 1:numel(unique(phasebin(:)))
       ngroups = ntrials;
     end
     
+    loopdata(itrltime, bin).ngroups = ngroups;
+    loopdata(itrltime, bin).dat = dat;
+    loopdata(itrltime, bin).ntrials = ntrials;
+    loopdata(itrltime, bin).phasebin_cond = phasebin_cond;
+    loopdata(itrltime, bin).nsamp_cond = nsamp_cond;
+    
     % prewhiten with covariance matrix
     % this is moved to dml_preparedata because covariance should be
     % computed over trials, not time. Thus, covariance should be computed
     % for every fold (Guggenmos et al 2018).
+    
+  end
+end
 
-    %% decode
-    % loop over time started higher up in case of do_binpertimepoint. if enet
-    % is used, don't loop over time (this will be done in parallel jobs).
+%% select same amount of data for each bin
+for itrltime = trltime
+  for bin = 1:nbins
+    ngroups_all(bin) = loopdata(itrltime, bin).ngroups;  
+  end
+  ngroups_all = min(ngroups_all);
+  
+for bin = 1:nbins
+  for k=1:numel(loopdata(itrltime, bin).dat)
+    idx = randperm(loopdata(itrltime, bin).ngroups);
+    loopdata(itrltime, bin).dat{k}.trial = loopdata(itrltime, bin).dat{k}.trial(idx(1:ngroups_all),:);
+  end
+end 
+end
+
+%% decode
+% loop over time started higher up in case of do_binpertimepoint. if enet
+% is used, don't loop over time (this will be done in parallel jobs).
+for bin = 1:nbins
+  % select trial subset (when phasebinning)
+  for itrltime = trltime
+    
+    clear dat;
+    dat = loopdata(itrltime, bin).dat;
+    
     if ~isempty(tbin)
       allt=tbin;
     elseif do_binpertimepoint || do_collapsephasebin
@@ -373,7 +407,7 @@ for bin = 1:numel(unique(phasebin(:)))
           rem = size(dat{1}.trial,1)-sum(groupsize);
           groupsize = groupsize + [ones(1,rem), zeros(1,nfolds-rem)];
         else
-          nfolds = ngroups;
+          nfolds = ngroups_all;
         end
         if do_enet
           l1_ratio = 0.1;
@@ -383,7 +417,7 @@ for bin = 1:numel(unique(phasebin(:)))
         end
         
         % loop over trials: leave one trial out decoding
-        for itrl=1:nfolds   
+        for itrl=1:nfolds
           if do_collapsephasebin
             [traindata, testdata, traindesign, testdesign] = dml_preparedata(dat, sum(groupsize(1,1:itrl))-groupsize(itrl)+1:sum(groupsize(1,1:itrl)), cnt, do_prewhiten);
           else
@@ -399,7 +433,7 @@ for bin = 1:numel(unique(phasebin(:)))
             if do_collapsephasebin
               tmpacc2(k) = tmpacc(k,testdesign(k));
             else
-              accuracy{bin, cnt}(itrl+(k-1)*ngroups) = tmpacc(k,testdesign(k));
+              accuracy{bin, cnt}(itrl+(k-1)*ngroups_all) = tmpacc(k,testdesign(k));
             end
           end
           if do_collapsephasebin
@@ -458,7 +492,7 @@ end
 % save variables
 settings = struct('allses', do_allses, 'avgtrials', do_avgtrials, 'baselinecorrect', do_baselinecorrect,'binpertimepoint', do_binpertimepoint,'correcttrials', do_correcttrials, 'enet', do_enet, 'nestedcv', do_nestedcv, 'pca', do_pca, 'phasealign', do_phasealign, 'phasebin', do_phasebin, 'contrast', contrast,'prewhiten', do_prewhiten, 'smooth', do_smooth,'timeresolved', do_timeresolved, 'var', vararg);
 if ~exist('primal', 'var'), primal=[]; end
-profile off
+
 save(filename, 'accuracy','settings', 'primal')
 if do_phasebin
   save(filename, 'phase', 'trl', '-append');
