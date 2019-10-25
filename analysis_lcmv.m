@@ -31,7 +31,7 @@ for k=1:3
   data = dat{k};
   
   cfg         = [];
-  cfg.latency = [-0.25+1/fs 1];
+  cfg.latency = [-0.25+1/fs 1.2];
   data        = ft_selectdata(cfg, data);
   
   cfg                        = [];
