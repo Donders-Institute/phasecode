@@ -32,10 +32,12 @@ rng('shuffle');
 % load data
 datainfo;
 if do_allses
-  for ses=1:3 %numel(subjects(subj).sessions)
+  cnt=1;
+  for ses=subjects(subj).validsessions
     filename = [datadir, sprintf('sub%02d/meg%02d/sub%02d-meg%02d_cleandata.mat', subj, ses, subj, ses)];
-    tmp{ses} = load(filename, 'data');
-    tmp{ses} = tmp{ses}.data;
+    tmp{cnt} = load(filename, 'data');
+    tmp{cnt} = tmp{cnt}.data;
+    cnt=cnt+1;
   end
   data = ft_appenddata([], tmp{:});
   data.grad = tmp{1}.grad;
@@ -99,7 +101,11 @@ if do_timeresolved
   twindow = 1/fs;
   nsample = twindow*fs;
 else
-  toi = 1/data.fsample:1/data.fsample:1.2;
+  try
+    toi=time;
+  catch
+    toi = 1/data.fsample:1/data.fsample:1.2;
+  end
   tlength=1;
 end
 
