@@ -17,11 +17,15 @@ for k=1:numel(data)
 end
 cov = mean(cat(4,cov{:}),4);
 cov_avg= squeeze(mean(cov,1)); % FIXME implement a shrinkage transform (Ledoit and Wolf, 2004), to prevent rank-deficiency
-cov_inv = cov_avg^-0.5;
+% cov_inv = cov_avg^-0.5;
 
-for k=1:numel(data)
-  for t = 1:size(data{k}.trial,3)
-    data{k}.trial(:,:,t) = data{k}.trial(:,:,t)*cov_inv;
+if 0
+  for k=1:numel(data)
+    for t = 1:size(data{k}.trial,3)
+      data{k}.trial(:,:,t) = data{k}.trial(:,:,t)*cov_inv;
+    end
   end
+else
+  ft_info('if prewhitened data is wanted on top of covariance matrix, change setting in prewhiten_data.m')
 end
 
