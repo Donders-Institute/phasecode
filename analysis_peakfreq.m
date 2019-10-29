@@ -2,15 +2,17 @@ function analysis_peakfreq(subj)
 
 %% load data
 datainfo;
-  for k=1:numel(subjects(subj).sessions)
-    ses = subjects(subj).sessions(k);
-    filename = [projectdir, sprintf('data/sub%02d/meg%02d/sub%02d-meg%02d_cleandata.mat', subj, ses, subj, ses)];
-    tmp{k} = load(filename, 'data');
-    tmp{k} = tmp{k}.data;
+
+cnt=1;
+for ses=subjects(subj).validsessions
+  filename = [datadir, sprintf('sub%02d/meg%02d/sub%02d-meg%02d_cleandata.mat', subj, ses, subj, ses)];
+  tmp{cnt} = load(filename, 'data');
+  tmp{cnt} = tmp{cnt}.data;
+  cnt=cnt+1;
 end
-  data = ft_appenddata([], tmp{:});
-  data.grad = tmp{1}.grad;
-  clear tmp
+data = ft_appenddata([], tmp{:});
+data.grad = tmp{1}.grad;
+clear tmp
 fs=data.fsample;
 
 cfg=[];

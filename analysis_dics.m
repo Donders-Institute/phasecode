@@ -14,10 +14,12 @@ headmodel = ft_convert_units(headmodel, 'm');
 sourcemodel = ft_convert_units(sourcemodel, 'm');
 
 %% load MEG data
-for ses=1:3
+cnt=1;
+for ses=subjects(subj).validsessions
   filename = [datadir, sprintf('sub%02d/meg%02d/sub%02d-meg%02d_cleandata.mat', subj, ses, subj, ses)];
-  dat{ses} = load(filename, 'data');
-  dat{ses} = dat{ses}.data;
+  dat{cnt} = load(filename, 'data');
+  dat{cnt} = dat{cnt}.data;
+  cnt=cnt+1;
 end
 
 % prepare configurations and variables
@@ -31,7 +33,7 @@ cfgf.method = 'mtmfft';
 cfgf.taper = 'hanning';
 cfgf.foi = f;
 
-for k=1:3
+for k=1:numel(dat)
   data=dat{k};
 
 % if you want a hemisphere specific source, use the following.  
@@ -104,7 +106,7 @@ pow_stim = rmfield(tmppow_stim{1}, 'pow');
 pow_stim.pow = [];
 pow_bl = rmfield(tmppow_bl{1}, 'pow');
 pow_bl.pow = [];
-for k=1:3
+for k=1:numel(dat)
   pow_stim.pow = [pow_stim.pow tmppow_stim{k}.pow];
   pow_bl.pow = [pow_bl.pow tmppow_bl{k}.pow];
 end

@@ -17,17 +17,19 @@ end
 
 
 %% load MEG data
-for ses=1:3
+cnt=1;
+for ses=subjects(subj).validsessions
   filename = [datadir, sprintf('sub%02d/meg%02d/sub%02d-meg%02d_cleandata.mat', subj, ses, subj, ses)];
-  dat{ses} = load(filename, 'data');
-  dat{ses} = dat{ses}.data;
+  dat{cnt} = load(filename, 'data');
+  dat{cnt} = dat{cnt}.data;
+  cnt=cnt+1;
 end
 
 % prepare configurations and variables
 fs = dat{1}.fsample;
 
 
-for k=1:3
+for k=1:numel(dat)
   data = dat{k};
   
   cfg         = [];
