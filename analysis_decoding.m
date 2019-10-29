@@ -10,7 +10,9 @@ hemi                = ft_getopt(varargin, 'hemi',                1);
 f                   = ft_getopt(varargin, 'f',                   10);
 do_randphasebin     = ft_getopt(varargin, 'do_randphasebin',     false);
 nfolds              = ft_getopt(varargin, 'nfolds',              5);
-nperm               = ft_getopt(varargin, 'nfolds',              10);
+nperm               = ft_getopt(varargin, 'nperm',               10);
+nrandperm           = ft_getopt(varargin, 'nrandperm',           100);
+
 
 ft_info off
 
@@ -29,6 +31,7 @@ data = ft_appenddata([], tmp{:});
 clear tmp
 
 fs = data.fsample;
+
 
 % Find trialindices per condition
 cfg=[];
@@ -60,6 +63,11 @@ load(filename)
 phasebin(~cfg.trials,:)=[];
 phase(~cfg.trials,:)=[];
 
+nchan = numel(data.label);
+ncond = 2;
+nbins = numel(unique(phasebin(:)));
+accuracy = zeros(nrandperm, nperm, nbins, nfolds);
+
 % select time window of interest.
 cfg=[];
 cfg.toilim = [time(1) time(end)];
@@ -75,7 +83,7 @@ if do_correcttrials
   phasebin(rmtrials,:,:)=[];
 end
 data_orig=data;
-nbins = numel(unique(phasebin(:)));
+
 
 %% Split up conditions
 data = data_orig;
@@ -93,9 +101,10 @@ for k=1:size(idx_ori,1)
   else
     dat{k} = ft_selectdata(cfg, data);
   end
-  tmpphasebin{k} = phasebin(cfg.trials,:);
+  phasebin_orig{k} = phasebin(cfg.trials,:);
 end
-phasebin = tmpphasebin;
+clear phasebin
+
 % make timelock structure
 cfg=[];
 cfg.keeptrials = 'yes';
@@ -109,90 +118,89 @@ for k=1:numel(dat)
   end
 end
 
-
-for k=1:numel(phasebin)
-  if do_randphasebin
-    [s1, s2] = size(phasebin{k});
-    phasebin{k} = phasebin{k}(randperm(s1),:);
+for irandperm = 1:nrandperm
+  for k=1:numel(phasebin_orig)
+    if do_randphasebin
+      [s1, s2] = size(phasebin_orig{k});
+      phasebin{k} = phasebin_orig{k}(randperm(s1),:);
+    else
+      phasebin{k} = phasebin_orig{k};
+    end
+    phasebin{k} = reshape(phasebin{k}, [], 1);
   end
-  phasebin{k} = reshape(phasebin{k}, [], 1);
-end
-
-
-nchan = size(dat{1}.trial,2);
-ncond = size(dat,2);
-%% Select data per phase bin
-for bin=1:nbins
-  for k=1:ncond
-    bindat{bin,k} = dat{k};
-    bindat{bin,k}.time = 1;
-    bindat{bin,k}.trial = reshape(permute(bindat{bin,k}.trial,[1 3 2]), [], nchan);
-    
-    % select samples with particular phase
-    sampinbin = phasebin{k}==bin; 
-    nsamp_cond(bin,k) = sum(sampinbin);
-    bindat{bin,k}.trial = bindat{bin,k}.trial(sampinbin,:);
-  end
-end
-% NOTE: no sub selection of trials until this point. Data can be used
-% multiple times.
-nsmp = min(nsamp_cond(:));
-bindat_orig = bindat;
-
-% Repeat decoding multiple times with different random averages of trials.
-accuracy = zeros(nperm, nbins, nfolds);
-for iperm=1:nperm
-  bindat = bindat_orig;
-  % select same amount of data for each condition, and each bin.
-  for bin = 1:nbins
-    for k=1:2
-      tmpidx = randperm(nsamp_cond(bin,k));
-      bindat{bin,k}.trial = bindat{bin,k}.trial(tmpidx(1:nsmp),:);
+  
+  %% Select data per phase bin
+  for bin=1:nbins
+    for k=1:ncond
+      bindat{bin,k} = dat{k};
+      bindat{bin,k}.time = 1;
+      bindat{bin,k}.trial = reshape(permute(bindat{bin,k}.trial,[1 3 2]), [], nchan);
       
-      % increase SNR by averaging trials randomly
-      groupsize = 10;
-      ngroups = floor(nsmp/groupsize);
-      bindat{bin,k} = randavg_trials(bindat{bin,k}, ngroups, groupsize);
+      % select samples with particular phase
+      sampinbin = phasebin{k}==bin;
+      nsamp_cond(bin,k) = sum(sampinbin);
+      bindat{bin,k}.trial = bindat{bin,k}.trial(sampinbin,:);
     end
   end
+  % NOTE: no sub selection of trials until this point. Data can be used
+  % multiple times.
+  nsmp = min(nsamp_cond(:));
+  bindat_orig = bindat;
   
-  %% decoding
-  % loop over time started higher up in case of do_binpertimepoint. if enet
-  % is used, don't loop over time (this will be done in parallel jobs).
-  
-  % initialize folding parameters
-  groupsize_fold = floor(ngroups/nfolds);
-  groupsize_fold = repmat(groupsize_fold, 1, nfolds);
-  rem = ngroups-sum(groupsize_fold);
-  groupsize_fold = groupsize_fold + [ones(1,rem), zeros(1,nfolds-rem)];
-  
-  for bin = 1:nbins
-    % initialize model
-    model = dml.svm;
-    
-    % n-fold cross validation
-    for ifold=1:nfolds
-      % select data per fold and pre-whiten
-      [traindata, testdata, traindesign, testdesign] = dml_preparedata(bindat(bin,:), sum(groupsize_fold(1,1:ifold))-groupsize_fold(ifold)+1:sum(groupsize_fold(1,1:ifold)), 1, do_prewhiten);
-      
-      model = model.train(traindata,traindesign);
-      primal{iperm, bin}(ifold, :) = model.primal;
-      tmpacc = model.test(testdata);
-      for k=1:numel(testdesign)
-        tmpacc2(k) = tmpacc(k,testdesign(k));
+  % Repeat decoding multiple times with different random averages of trials.
+  for iperm=1:nperm
+    bindat = bindat_orig;
+    % select same amount of data for each condition, and each bin.
+    for bin = 1:nbins
+      for k=1:2
+        tmpidx = randperm(nsamp_cond(bin,k));
+        bindat{bin,k}.trial = bindat{bin,k}.trial(tmpidx(1:nsmp),:);
+        
+        % increase SNR by averaging trials randomly
+        groupsize = 10;
+        ngroups = floor(nsmp/groupsize);
+        bindat{bin,k} = randavg_trials(bindat{bin,k}, ngroups, groupsize);
       end
-      accuracy(iperm, bin, ifold) = mean(tmpacc2);
-      clear tmpacc2
     end
+    
+    %% decoding
+    % loop over time started higher up in case of do_binpertimepoint. if enet
+    % is used, don't loop over time (this will be done in parallel jobs).
+    
+    % initialize folding parameters
+    groupsize_fold = floor(ngroups/nfolds);
+    groupsize_fold = repmat(groupsize_fold, 1, nfolds);
+    rem = ngroups-sum(groupsize_fold);
+    groupsize_fold = groupsize_fold + [ones(1,rem), zeros(1,nfolds-rem)];
+    
+    for bin = 1:nbins
+      % initialize model
+      model = dml.svm;
+      
+      % n-fold cross validation
+      for ifold=1:nfolds
+        % select data per fold and pre-whiten
+        [traindata, testdata, traindesign, testdesign] = dml_preparedata(bindat(bin,:), sum(groupsize_fold(1,1:ifold))-groupsize_fold(ifold)+1:sum(groupsize_fold(1,1:ifold)), 1, do_prewhiten);
+        
+        model = model.train(traindata,traindesign);
+        primal{iperm, bin}(ifold, :) = model.primal;
+        tmpacc = model.test(testdata);
+        for k=1:numel(testdesign)
+          tmpacc2(k) = tmpacc(k,testdesign(k));
+        end
+        accuracy(irandperm, iperm, bin, ifold) = mean(tmpacc2);
+        clear tmpacc2
+      end
+    end
+    clear bindat
   end
-  clear dat
 end
-
+if size(accuracy,1)==1, accuracy = squeeze(accuracy); end
 
 %% save
 vararg = [];
 % make filename
-filename = [project_dir 'results/collapsephasebin/'];
+filename = [projectdir 'results/collapsephasebin/'];
 
 switch contrast
   case 'congruent'
