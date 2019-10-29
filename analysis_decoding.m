@@ -26,12 +26,11 @@ for ses=subjects(subj).validsessions
   cnt=cnt+1;
 end
 data = ft_appenddata([], tmp{:});
-data.grad = tmp{1}.grad;
 clear tmp
 
 fs = data.fsample;
 
-% Split up conditions
+% Find trialindices per condition
 cfg=[];
 switch contrast
   case 'congruent'
@@ -60,9 +59,6 @@ filename = [projectdir, 'results/phase/', sprintf('sub%02d_phase_%d', subj, f(1)
 load(filename)
 phasebin(~cfg.trials,:)=[];
 phase(~cfg.trials,:)=[];
-if do_randphasebin
-  phasebin = reshape(phasebin(randperm(size(phasebin,1)),:), [size(phasebin,1) size(phasebin,2)]);
-end
 
 % select time window of interest.
 cfg=[];
@@ -81,78 +77,82 @@ end
 data_orig=data;
 nbins = numel(unique(phasebin(:)));
 
-%% Prepare all data.
-% loop over bins (only >1 when phasebinning)
-for bin = 1:nbins
-  % select trial subset (when phasebinning)
-  data = data_orig;
-  
-  %% Split up conditions
-  for k=1:size(idx_ori,1)
-    cfg=[];
-    cfg.trials = ismember(data.trialinfo(:,2), idx_ori(k,:));
-    if iscell(data.trial)
-      % use the following code to speed op computation
-      dat{bin,k} = data;
-      dat{bin,k}.trial = dat{bin,k}.trial(cfg.trials);
-      dat{bin,k}.time = dat{bin,k}.time(cfg.trials);
-      dat{bin,k}.trialinfo = dat{bin,k}.trialinfo(cfg.trials,:);
-      dat{bin,k}.sampleinfo = dat{bin,k}.sampleinfo(cfg.trials,:);
-    else
-      dat{bin,k} = ft_selectdata(cfg, data);
-    end
-    phasebin_cond{bin,k} = phasebin(cfg.trials,:);
-  end
-  
-  % make timelock structure
+%% Split up conditions
+data = data_orig;
+
+for k=1:size(idx_ori,1)
   cfg=[];
-  cfg.keeptrials = 'yes';
-  for k=1:size(dat,2)
-    try % save some time by not using fieldtrip function (only works if all trials have the same time axis)
-      dat{bin,k}.trial = permute(cat(3, dat{bin,k}.trial{:}), [3 1 2]);
-      dat{bin,k}.time = dat{bin,k}.time{1};
-      dat{bin,k}.dimord = 'rpt_chan_time';
-    catch
-      dat{bin,k} = ft_timelockanalysis(cfg, dat{bin,k});
-    end
+  cfg.trials = ismember(data.trialinfo(:,2), idx_ori(k,:));
+  if iscell(data.trial)
+    % use the following code to speed op computation
+    dat{k} = data;
+    dat{k}.trial = dat{k}.trial(cfg.trials);
+    dat{k}.time = dat{k}.time(cfg.trials);
+    dat{k}.trialinfo = dat{k}.trialinfo(cfg.trials,:);
+    dat{k}.sampleinfo = dat{k}.sampleinfo(cfg.trials,:);
+  else
+    dat{k} = ft_selectdata(cfg, data);
   end
-  
-  %% Select data per phase bin
-  nchan = size(dat{1}.trial,2);
-  for k=1:size(dat,2)
-    dat{bin,k}.time = 1;
-    dat{bin,k}.trial = reshape(permute(dat{bin,k}.trial,[1 3 2]), [], nchan);
-    phasebin_cond{bin,k} = reshape(phasebin_cond{bin,k}, [],1);
+  tmpphasebin{k} = phasebin(cfg.trials,:);
+end
+phasebin = tmpphasebin;
+% make timelock structure
+cfg=[];
+cfg.keeptrials = 'yes';
+for k=1:numel(dat)
+  try % save some time by not using fieldtrip function (only works if all trials have the same time axis)
+    dat{k}.trial = permute(cat(3, dat{k}.trial{:}), [3 1 2]);
+    dat{k}.time = dat{k}.time{1};
+    dat{k}.dimord = 'rpt_chan_time';
+  catch
+    dat{k} = ft_timelockanalysis(cfg, dat{k});
   end
-  for k=1:size(phasebin_cond,2)
-    nsamp_cond(bin,k) = sum(phasebin_cond{bin,k}==bin);
+end
+
+
+for k=1:numel(phasebin)
+  if do_randphasebin
+    [s1, s2] = size(phasebin{k});
+    phasebin{k} = phasebin{k}(randperm(s1),:);
   end
-  
-  for k=1:size(phasebin_cond,2)
-    sampinbin = phasebin_cond{bin,k}==bin; % select samples with particular phase
-    dat{bin,k}.trial = dat{bin,k}.trial(sampinbin,:);
-    phasebin_cond{bin,k} = phasebin_cond{bin,k}(sampinbin,:); % do the same with sample matrix
+  phasebin{k} = reshape(phasebin{k}, [], 1);
+end
+
+
+nchan = size(dat{1}.trial,2);
+ncond = size(dat,2);
+%% Select data per phase bin
+for bin=1:nbins
+  for k=1:ncond
+    bindat{bin,k} = dat{k};
+    bindat{bin,k}.time = 1;
+    bindat{bin,k}.trial = reshape(permute(bindat{bin,k}.trial,[1 3 2]), [], nchan);
+    
+    % select samples with particular phase
+    sampinbin = phasebin{k}==bin; 
+    nsamp_cond(bin,k) = sum(sampinbin);
+    bindat{bin,k}.trial = bindat{bin,k}.trial(sampinbin,:);
   end
 end
 % NOTE: no sub selection of trials until this point. Data can be used
 % multiple times.
 nsmp = min(nsamp_cond(:));
-alldat = dat;
+bindat_orig = bindat;
 
 % Repeat decoding multiple times with different random averages of trials.
 accuracy = zeros(nperm, nbins, nfolds);
 for iperm=1:nperm
-  dat = alldat;
+  bindat = bindat_orig;
   % select same amount of data for each condition, and each bin.
   for bin = 1:nbins
     for k=1:2
       tmpidx = randperm(nsamp_cond(bin,k));
-      dat{bin,k}.trial = dat{bin,k}.trial(tmpidx(1:nsmp),:);
+      bindat{bin,k}.trial = bindat{bin,k}.trial(tmpidx(1:nsmp),:);
       
       % increase SNR by averaging trials randomly
       groupsize = 10;
       ngroups = floor(nsmp/groupsize);
-      dat{bin,k} = randavg_trials(dat{bin,k}, ngroups, groupsize);
+      bindat{bin,k} = randavg_trials(bindat{bin,k}, ngroups, groupsize);
     end
   end
   
@@ -173,7 +173,7 @@ for iperm=1:nperm
     % n-fold cross validation
     for ifold=1:nfolds
       % select data per fold and pre-whiten
-      [traindata, testdata, traindesign, testdesign] = dml_preparedata(dat(bin,:), sum(groupsize_fold(1,1:ifold))-groupsize_fold(ifold)+1:sum(groupsize_fold(1,1:ifold)), 1, do_prewhiten);
+      [traindata, testdata, traindesign, testdesign] = dml_preparedata(bindat(bin,:), sum(groupsize_fold(1,1:ifold))-groupsize_fold(ifold)+1:sum(groupsize_fold(1,1:ifold)), 1, do_prewhiten);
       
       model = model.train(traindata,traindesign);
       primal{iperm, bin}(ifold, :) = model.primal;
