@@ -25,7 +25,5 @@ if 0
       data{k}.trial(:,:,t) = data{k}.trial(:,:,t)*cov_inv;
     end
   end
-else
-  ft_info('if prewhitened data is wanted on top of covariance matrix, change setting in prewhiten_data.m')
 end
 
