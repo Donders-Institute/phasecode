@@ -1,4 +1,4 @@
-function [traindata, testdata, traindesign, testdesign, cov] = dml_preparedata(data, trlnum, tpoint, do_prewhiten, cov)
+function [traindata, testdata, traindesign, testdesign, covar] = dml_preparedata(data, trlnum, tpoint, do_prewhiten, covar)
 if ~exist('do_prewhiten', 'var'), do_prewhiten = false; end
 
 ntrl = size(data{1}.trial,1);
@@ -10,18 +10,28 @@ for k=1:numel(data)
 end
 
 if do_prewhiten % prewhiten only based on the training set. prewhiten over trials, potentially average over time
-  if ~exist('cov', 'var') || isempty(cov)
+  if ~exist('cov', 'var') || isempty(covar)
     for k=1:numel(data)
       data{k}.trial = permute(data{k}.trial(:,:,:), [3 2 1]);
       data{k}.time = 1:size(data{k}.trial,3);
     end
-    [~, cov] = prewhiten_data(data);
-    cov = squeeze(mean(cov,1));
+    [~, covar] = prewhiten_data(data);
+    covar = squeeze(mean(covar,1));
   end
-  cov_inv = cov^-0.5;
+  % instead of inversing the covariance matrix (which could run into
+  % numerical problems if it's rank deficient), first shrink the number of
+  % components (and thus svm features).
+%   covar_inv = covar^-0.5;
+  [u,s,v]=svd(covar);
+  diagS=diag(s);
+  sel=find(cumsum(diagS)./sum(diagS)<=1);  
+  P=diag(1./sqrt(diagS(sel)))*u(:,sel)';
+
   for k=1:numel(data)
-    traindata{k} = traindata{k}*cov_inv;
-    testdata{k} = testdata{k}*cov_inv;
+        traindata{k} = traindata{k}*P';
+    testdata{k} = testdata{k}*P';
+%     traindata{k} = traindata{k}*covar_inv;
+%     testdata{k} = testdata{k}*covar_inv;
   end
 end
 
