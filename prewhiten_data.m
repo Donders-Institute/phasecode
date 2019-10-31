@@ -1,4 +1,4 @@
-function [data, cov, cov_inv] = prewhiten_data(data)
+function [data, cov] = prewhiten_data(data)
 % prewhitens the data by computing the covariance over the entire dataset
 % and dividing the data by the average covariance over datasets.
 % this function assumes multiple timelockstructures in a cell, with dimord
@@ -16,7 +16,7 @@ for k=1:numel(data)
   %}
 end
 cov = mean(cat(4,cov{:}),4);
-cov_avg= squeeze(mean(cov,1)); % FIXME implement a shrinkage transform (Ledoit and Wolf, 2004), to prevent rank-deficiency
+% cov_avg= squeeze(mean(cov,1)); % FIXME implement a shrinkage transform (Ledoit and Wolf, 2004), to prevent rank-deficiency
 % cov_inv = cov_avg^-0.5;
 
 if 0
