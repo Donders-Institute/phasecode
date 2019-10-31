@@ -13,6 +13,7 @@ nfolds              = ft_getopt(varargin, 'nfolds',              5);
 nperm               = ft_getopt(varargin, 'nperm',               10);
 nrandperm           = ft_getopt(varargin, 'nrandperm',           100);
 
+if ~do_randphasebin, nrandperm = 1; end
 
 ft_info off
 
@@ -183,7 +184,7 @@ for irandperm = 1:nrandperm
         [traindata, testdata, traindesign, testdesign] = dml_preparedata(bindat(bin,:), sum(groupsize_fold(1,1:ifold))-groupsize_fold(ifold)+1:sum(groupsize_fold(1,1:ifold)), 1, do_prewhiten);
         
         model = model.train(traindata,traindesign);
-        primal{iperm, bin}(ifold, :) = model.primal;
+        primal{iperm, bin,ifold} = model.primal;
         tmpacc = model.test(testdata);
         for k=1:numel(testdesign)
           tmpacc2(k) = tmpacc(k,testdesign(k));
