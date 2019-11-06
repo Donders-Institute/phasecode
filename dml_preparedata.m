@@ -24,7 +24,7 @@ if do_prewhiten % prewhiten only based on the training set. prewhiten over trial
 %   covar_inv = covar^-0.5;
   [u,s,v]=svd(covar);
   diagS=diag(s);
-  sel=find(cumsum(diagS)./sum(diagS)<=1);  
+  sel=find(cumsum(diagS)./sum(diagS)<=0.99);  
   P=diag(1./sqrt(diagS(sel)))*u(:,sel)';
 
   for k=1:numel(data)
