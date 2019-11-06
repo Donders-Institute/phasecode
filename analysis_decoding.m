@@ -220,12 +220,12 @@ if strcmp(contrast, 'attended') || strcmp(contrast, 'unattended')
 end
 filename = [filename, sprintf('_f%d', f)];
 
-if exist('randnr', 'var')
+if exist('randnr', 'var') && ~isempty(randnr)
   filename = [filename, sprintf('_%d', randnr)];
 end
 
 % save variables
-settings = struct('avgtrials', do_avgtrials, 'correcttrials', do_correcttrials, 'contrast', contrast,'prewhiten', do_prewhiten, 'var', vararg);
+settings = struct('avgtrials', do_avgtrials, 'correcttrials', do_correcttrials, 'contrast', contrast,'prewhiten', do_prewhiten, 'var', vararg, 'nperm',nperm, 'nrandperm', nrandperm);
 if ~exist('primal', 'var'), primal=[]; end
 
 save(filename, 'accuracy','settings', 'primal')
