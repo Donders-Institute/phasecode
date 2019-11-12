@@ -1,45 +1,45 @@
-function [traindata, testdata, traindesign, testdesign, covar] = dml_preparedata(data, trlnum, tpoint, do_prewhiten, covar)
+function [traindata, testdata, traindesign, testdesign, P] = dml_preparedata(data, trlnum, tpoint, do_prewhiten, covar)
 if ~exist('do_prewhiten', 'var'), do_prewhiten = false; end
 
-ntrl = size(data{1}.trial,1);
+ntest  = zeros(numel(data),1);
+ntrain = zeros(numel(data),1);
+
  
 for k=1:numel(data)
-  testdata{k} = data{k}.trial(trlnum, :, tpoint);
-  data{k}.trial = data{k}.trial(setdiff(1:ntrl, trlnum), :, :);
-  traindata{k} = data{k}.trial(:,:,tpoint);
+  ntrl = size(data{k}.trial,1);
+  testdata{k}   = data{k}.trial(trlnum, :, tpoint);
+  traindata{k}  = data{k}.trial(setdiff(1:ntrl, trlnum), :, tpoint);
+  
+  ntest(k,1)  = size(testdata{k},1);
+  ntrain(k,1) = size(traindata{k},1);
 end
 
-if do_prewhiten % prewhiten only based on the training set. prewhiten over trials, potentially average over time
-  if ~exist('cov', 'var') || isempty(covar)
-    for k=1:numel(data)
-      data{k}.trial = permute(data{k}.trial(:,:,:), [3 2 1]);
-      data{k}.time = 1:size(data{k}.trial,3);
-    end
-    [~, covar] = prewhiten_data(data);
-    covar = squeeze(mean(covar,1));
-  end
-  % instead of inversing the covariance matrix (which could run into
-  % numerical problems if it's rank deficient), first shrink the number of
-  % components (and thus svm features).
-%   covar_inv = covar^-0.5;
+if do_prewhiten==1 % prewhiten only based on the training set. prewhiten over trials, potentially average over time
+  tmp = cat(1,traindata{:});
+  M   = mean(tmp);
+  tmp = tmp-M(ones(size(tmp,1),1),:);
+  covar = tmp'*tmp;
+  
+  thr     = 0.99;
+
   [u,s,v]=svd(covar);
   diagS=diag(s);
   sel=find(cumsum(diagS)./sum(diagS)<=0.99);  
   P=diag(1./sqrt(diagS(sel)))*u(:,sel)';
 
-  for k=1:numel(data)
-        traindata{k} = traindata{k}*P';
-    testdata{k} = testdata{k}*P';
-%     traindata{k} = traindata{k}*covar_inv;
-%     testdata{k} = testdata{k}*covar_inv;
+  for k=1:numel(traindata)
+    traindata{k} = (traindata{k} - M(ones(ntrain(k),1), :))*P';
+    testdata{k}  = (testdata{k}  - M(ones(ntest(k), 1), :))*P';
   end
+else
+  P = [];
 end
 
 traindata = cat(1,traindata{:});
 testdata = cat(1,testdata{:});
-traindesign = [];
-testdesign = [];
+traindesign = zeros(0,1);
+testdesign  = zeros(0,1);
 for k=1:numel(data)
-  traindesign = [traindesign; k*ones(ntrl-numel(trlnum),1)];
-  testdesign = [testdesign; k*ones(numel(trlnum),1)];
+  traindesign = cat(1,traindesign,k.*ones(ntrain(k),1));
+  testdesign  = cat(1,testdesign, k.*ones(ntest(k), 1));
 end
