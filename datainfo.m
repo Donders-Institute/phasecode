@@ -1,5 +1,5 @@
 subjects = [];
-valid_subjects=2:9;
+valid_subjects=1:10;
 %% pilot
 % subjects(1).dataset = '/home/electromag/matves/Data/phasecode/meg_raw/pilot/matspilot1_1200hz_20150330_01.ds';
 % subjects(1).trialfun = 'mytrialfun_pilot';
