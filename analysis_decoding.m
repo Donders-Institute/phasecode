@@ -6,6 +6,7 @@ do_correcttrials    = ft_getopt(varargin, 'do_correcttrials',    false);
 do_avgtrials        = ft_getopt(varargin, 'do_avgtrials',        false);
 do_prewhiten        = ft_getopt(varargin, 'do_prewhiten',        0);
 randnr              = ft_getopt(varargin, 'randnr',              []);
+rngseed             = ft_getopt(varargin, 'rngseed',             []);
 hemi                = ft_getopt(varargin, 'hemi',                1);
 f                   = ft_getopt(varargin, 'f',                   10);
 do_randphasebin     = ft_getopt(varargin, 'do_randphasebin',     false);
@@ -14,15 +15,21 @@ nperm               = ft_getopt(varargin, 'nperm',               10);
 nrandperm           = ft_getopt(varargin, 'nrandperm',           100);
 nbins               = ft_getopt(varargin, 'nbins',               12);
 groupsize           = ft_getopt(varargin, 'groupsize',           10);
+binoverlap          = ft_getopt(varargin, 'binoverlap',          false);
+tmpfilename         = ft_getopt(varargin, 'tmpfilename',         []);
+dosave              = ft_getopt(varargin, 'dosave',              true);
 
 if ~do_randphasebin, nrandperm = 1; end
+if isempty(rngseed)
+  rng('shuffle'); rngseed = rand(1)*10^6;
+end
+rng(rngseed, 'twister');
 
 ft_info off
 
-rng('shuffle');
-
 % load data
 datainfo;
+cfg=[];
 cnt=1;
 for ses=subjects(subj).validsessions
   filename = [datadir, sprintf('sub%02d/meg%02d/sub%02d-meg%02d_cleandata.mat', subj, ses, subj, ses)];
@@ -37,34 +44,29 @@ fs = data.fsample;
 
 
 % Find trialindices per condition
-cfg=[];
-switch contrast
-  case 'congruent'
-    idx_ori(1,:) = 11;
-    idx_ori(2,:) = 14;
-    idx = ismember(data.trialinfo(:,2), idx_ori);
-  case 'attended'
-    tmpidx{1} = [11 12; 11 13]; % CW:  first row corresponds to left, second to right hemifield
-    tmpidx{2} = [13 14; 12 14];
-    idx_ori(1,:) = tmpidx{1}(hemi,:);
-    idx_ori(2,:) = tmpidx{2}(hemi,:);
-    idx = ismember(data.trialinfo(:,2), idx_ori) & data.trialinfo(:,1)==hemi;
-  case 'unattended'
-    tmpidx{1} = [11 12; 11 13]; % CW:  first row corresponds to left, second to right hemifield
-    tmpidx{2} = [13 14; 12 14];
-    idx_ori(1,:) = tmpidx{1}(hemi,:);
-    idx_ori(2,:) = tmpidx{2}(hemi,:);
-    idx = ismember(data.trialinfo(:,2), idx_ori) & data.trialinfo(:,1)~=hemi;
-end
-cfg.trials = idx;
-data = ft_selectdata(cfg, data);
+[data, idx, idx_ori] = phasecode_select_condition(data, contrast, hemi);
 
 % divide trials into phase bins
-centerphase = [0 1/3 2/3 1 4/3 5/3]*pi;%[acos(1), acos(0), acos(-1)];
 filename = [projectdir, 'results/phase/', sprintf('sub%02d_phase_%d', subj, f(1))];
 load(filename)
-phasebin(~cfg.trials,:)=[];
-phase(~cfg.trials,:)=[];
+[phasebin, phase, ~, time]  = analysis_phase(subj, f(1), [], 3, false);
+% if strcmp(contrast, 'unattended')
+%   phasebin = phasebin{hemi};
+%   phase = phase{hemi};
+% else
+  phasebin = phasebin{mod(hemi,2)+1}; % for attention left, take right hemisphere phase.
+  phase = phase{mod(hemi,2)+1};
+
+
+% end
+phasebin(~idx,:)=[];
+phase(~idx,:)=[];
+
+if 1 % only use data after the main ERF (post 400 ms)
+  time(1:80)=[];
+  phasebin(:,1:80)=[];
+  phase(:,1:80) = [];
+end 
 
 nchan = numel(data.label);
 ncond = 2;
@@ -124,10 +126,12 @@ end
 for irandperm = 1:nrandperm
   for k=1:numel(phasebin_orig)
     if do_randphasebin
+      % circularly shift each row by a random amount, maximal 1 period
+      % forward or backward in time.
       [s1, s2] = size(phasebin_orig{k});
-      shufvec  = randperm(s1);
-      phasebin{k} = phasebin_orig{k}(shufvec,:);
-      phase{k}    = phase_orig{k}(shufvec,:);
+      shufvec     = randi([-floor(fs/f) floor(fs/f)],s1,1);
+      phasebin{k} = circshift_columns(transpose(phasebin_orig{k}), shufvec)';
+      phase{k}    = circshift_columns(transpose(phase_orig{k}), shufvec)';
     else
       phasebin{k} = phasebin_orig{k};
       phase{k}    = phase_orig{k};
@@ -137,14 +141,33 @@ for irandperm = 1:nrandperm
   end
   
   %% Select data per phase bin
-  centerphase = linspace(0,2*pi,nbins+1);
-  centerphase = [centerphase(end-1)-2*pi centerphase];
+  
+  if binoverlap
+    centerphase = (0:1/nbins:(nbins-1)/nbins)*pi;
+    for k=1:numel(phase)
+      for l=1:numel(phase{k})
+        d{k}(l,:) = abs(circ_dist(phase{k}(l), centerphase));
+      end
+      tmpn = size(d{k},1);
+      tmpn_perbin = tmpn/5;
+      usepercentage = 0.6;
+      usensmp = floor(tmpn_perbin*usepercentage);
+      [~, lowestd{k}] = sort(d{k}, 1, 'ascend');
+      usesmp{k} = lowestd{k}(1:usensmp,:);
+    end
+  else
+    centerphase = linspace(0,2*pi,nbins+1);
+    centerphase = [centerphase(end-1)-2*pi centerphase];
+  end
   for bin=1:nbins
     for k=1:ncond
       bindat{bin,k} = dat{k};
       bindat{bin,k}.time = 1;
       bindat{bin,k}.trial = reshape(permute(bindat{bin,k}.trial,[1 3 2]), [], nchan);
-      
+      if binoverlap
+        bindat{bin,k}.trial = bindat{bin,k}.trial(usesmp{k}(:,bin),:);
+        nsamp_cond(bin,k) = numel(usesmp{k}(:, bin));
+      else
       % select samples with particular phase
       if bin==1
         % deal with wrap around 0
@@ -155,6 +178,7 @@ for irandperm = 1:nrandperm
       
       nsamp_cond(bin,k) = sum(sampinbin);
       bindat{bin,k}.trial = bindat{bin,k}.trial(sampinbin,:);
+      end
     end
   end
   % NOTE: no sub selection of trials until this point. Data can be used
@@ -171,7 +195,10 @@ for irandperm = 1:nrandperm
     fprintf('computing permutation %d/%d\n',iperm,nperm);
     bindat = bindat_orig;
     % select same amount of data for each condition, and each bin.
+
+%{
 %% the commented out section is on average 5 times as slow as the sparse multiplication
+%
 %     % select same amount of data for each condition, and each bin.
 %     for bin = 1:nbins
 %       for k=1:2
@@ -184,6 +211,7 @@ for irandperm = 1:nrandperm
 %         bindat{bin,k} = randavg_trials(bindat{bin,k}, ngroups, groupsize);
 %       end
 %     end
+%}
     for bin = 1:nbins
       P    = sparse(x,y,z,ngroups,size(bindat{bin,1}.trial,1));
       tmp1 = P(:,randperm(size(P,2)))*bindat{bin,1}.trial;
@@ -204,7 +232,6 @@ for irandperm = 1:nrandperm
       end
       bindat{bin,1}.trial = tmp1;
       bindat{bin,2}.trial = tmp2;  
-      
     end
     
     %% decoding
@@ -218,12 +245,12 @@ for irandperm = 1:nrandperm
     groupsize_fold = groupsize_fold + [ones(1,rem), zeros(1,nfolds-rem)];
     
     for bin = 1:nbins
-      
       % n-fold cross validation
       for ifold=1:nfolds
         % select data per fold and pre-whiten
         indx_testtrials = sum(groupsize_fold(1,1:ifold))-groupsize_fold(ifold)+1:sum(groupsize_fold(1,1:ifold));
-        [traindata, testdata, traindesign, testdesign, P] = dml_preparedata(bindat(bin,:), indx_testtrials, 1, do_prewhiten);
+        [traindata, testdata, traindesign, testdesign, tmpP] = dml_preparedata(bindat(bin,:), indx_testtrials, 1, do_prewhiten);
+        if ~isempty(tmpP), P=tmpP; end
         
         % initialize model
         model          = dml.svm;
@@ -262,7 +289,7 @@ switch contrast
   case 'unattended'
     filename = [filename, 'unattended/'];
 end
-filename = [filename, sprintf('sub%02d_decoding', subj)];
+filename = [filename, sprintf('sub%02d/phase3/sub%02d_decoding', subj, subj)];
 if do_randphasebin
   filename = [filename, '_rand'];
 end
@@ -277,6 +304,12 @@ end
 
 % save variables
 settings = struct('avgtrials', do_avgtrials, 'correcttrials', do_correcttrials, 'contrast', contrast,'prewhiten', do_prewhiten>0, 'var', vararg, 'nperm',nperm, 'nrandperm', nrandperm);
-if ~exist('primal', 'var'), primal=[]; end
-
-save(filename, 'accuracy','settings', 'primal', 'P')
+if ~exist('primal', 'var') || do_randphasebin, primal=[]; end
+rnumb=rng;
+if dosave
+    if isempty(tmpfilename)
+      save(filename, 'accuracy','settings', 'primal', 'P', 'rnumb')
+    else
+      save(tmpfilename, 'accuracy', 'rnumb')
+    end
+end
