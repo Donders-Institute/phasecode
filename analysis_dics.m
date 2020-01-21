@@ -25,12 +25,14 @@ end
 % prepare configurations and variables
 fs = dat{1}.fsample;
 load([projectdir, sprintf('results/freq/sub%02d_peakfreq.mat', subj)], 'gamma');
-f = gamma.peakfreq;
+f = ceil(mean(gamma.range));
+smo = ceil(diff(gamma.range)./2);
 
 cfgf=[];
 cfgf.output = 'fourier';
 cfgf.method = 'mtmfft';
-cfgf.taper = 'hanning';
+cfgf.taper = 'dpss';
+cfgf.tapsmofrq = smo;
 cfgf.foi = f;
 
 for k=1:numel(dat)
@@ -119,9 +121,17 @@ cfg.uvar = 2;
 design = [ones(1,n) 2*ones(1,n);1:n 1:n];
 cfg.design = design;
 cfg.method = 'analytic';
-cfg.statistic = 'depsamplesT';
+cfg.statistic = 'statfun_yuenTtest';
+cfg.yuen.type = 'depsamples';
+% cfg.statistic = 'depsamplesT';
 Tval = ft_sourcestatistics(cfg, pow_stim, pow_bl);
 
-[~, maxidx] = max(Tval.stat);
+load standard_sourcemodel3d6mm.mat
+ixL = find(sourcemodel.pos(:,1)<0);
+ixR = find(sourcemodel.pos(:,1)>0);
+[Tmax(1), maxidx(1)] = max(Tval.stat(ixL));
+[Tmax(2), maxidx(2)] = max(Tval.stat(ixR));
+maxidx(1) = ixL(maxidx(1));
+maxidx(2) = ixR(maxidx(2));
 
-save([projectdir, sprintf('results/freq/sub%02d_dics_gamma', subj)], 'maxidx', 'Tval', 'pow_stim', 'pow_bl', 'sourcemodel_ses', 'dicsfilter');
+save([projectdir, sprintf('results/freq/sub%02d_dics_gamma', subj)], 'maxidx','Tmax', 'Tval', 'pow_stim', 'pow_bl', 'sourcemodel_ses', 'dicsfilter');
