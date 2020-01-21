@@ -1,46 +1,4 @@
-% initialize parameters
-freqs = 7:10%[4:1:30 32:2:80];
-nperm = 50;
-nrandperm = 500;
-subj=4;
-centerphase = [0 1/3 2/3 1 4/3 5/3]*pi-pi;
-resultsdir = '/project/3011085.02/phasecode/results/collapsephasebin/';
-contrast = 'attended';
-hemis=[1];
-
-for h=hemis
-  if (strcmp(contrast, 'attended') || strcmp(contrast, 'unattended'))
-    hemi = sprintf('hemi%d_', h);
-  else
-    hemi = [];
-  end
-  
-  % load the decoding results for every frequency and randomization.
-  cnt=1;
-  for f=freqs
-    for ii = 1:nperm
-      tmp{cnt,ii} = load([resultsdir, sprintf('%s/sub%02d_decoding_%sf%d_%d', contrast, subj, hemi, f, ii)]);
-      tmp{cnt,ii} = mean(tmp{cnt,ii}.accuracy,2);
-    end
-    
-    % now do the same for random permutations
-    for ii = 1:nrandperm
-      tmp2{cnt,ii} = load([resultsdir, sprintf('%s/sub%02d_decoding_rand_%sf%d_%d', contrast, subj, hemi, f, ii)]);
-      tmp2{cnt,ii} = mean(tmp2{cnt,ii}.accuracy,2);
-    end
-    cnt=cnt+1;
-  end
-  
-  for k=1:size(tmp,1)
-    for ii=1:nperm
-      A(ii,:,k) = tmp{k,ii};
-    end
-    for ii=1:nrandperm
-      B(ii,:,k) = tmp2{k,ii};
-    end
-  end
-  % clear tmp tmp2
-  
+ 
   % shape accuracy per phase bin into fieldtrip structure.
   dat{h}=[];
   dat{h}.dimord = 'rpt_chan_freq';
