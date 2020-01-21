@@ -30,7 +30,7 @@ cfg.taper       = 'hanning';
 cfg.foilim      = [2 100];
 cfg.pad         = 1;
 cfg.keeptrials  = 'no'; % average baseline over trials
-cfg.channel     = {'MLO', 'MRO', 'MZO'};
+cfg.channel     = 'MEG';%{'MLO', 'MRO', 'MZO'};
 powBl           = ft_freqanalysis(cfg, dataBl);
 powAct          = ft_freqanalysis(cfg, dataAct);
 
@@ -41,11 +41,19 @@ powRatio      = ft_math(cfg, powAct, powBl);
 
 avgPow       = mean(powRatio.powspctrm,1);
 
-gamma.range = [30 90];
-range = [find(powRatio.freq==gamma.range(1)) find(powRatio.freq==gamma.range(2))];
-[gamma.pow_increase idx]  = max(avgPow(range(1):range(2)));
-freqs = powRatio.freq(range(1):range(2));
-gamma.peakfreq = freqs(idx);
+cfgp.layout = 'CTF275_helmet.mat';
+figure; ft_singleplotER(cfgp, powRatio)
+
+gamma.peakfreq = input('what is the gamma peak frequency?');
+gamma.range = input('what is the gamma range?');
+gamma.pow_increase = input('what is the power increase at peak frequency?');
+% range = [find(powRatio.freq==gamma.range(1)) find(powRatio.freq==gamma.range(2))];
+% [gamma.pow_increase idx]  = max(avgPow(range(1):range(2)));
+% freqs = powRatio.freq(range(1):range(2));
+% gamma.peakfreq = freqs(idx);
+
+
+
 
 beta.range = [14 30];
 range = [find(powRatio.freq==beta.range(1)) find(powRatio.freq==beta.range(2))];
