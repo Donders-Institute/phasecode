@@ -130,6 +130,7 @@ subj=4;
 model='2d';
 if strcmp(model, '2d')
     load([projectdir, sprintf('results/tlck/sub%02d_sourceparc.mat', subj)])
+    load atlas_subparc374_8k.mat
 end
 cfg=[];
 cnt=1;
@@ -179,11 +180,11 @@ end
 
 rt = data.trialinfo(:,6);
 phi=cat(3,phase{:});
-
+hemis= [1 2]
 
 for f=1:numel(freqs)
     f
-    for hemi=1%[1 2]
+    for hemi=hemis
         trlidx = find(data.trialinfo(:,1)==hemi);
 %         tmpphi = phi(trlidx,:,f);
         tmpphi = phi(:,:,f);
@@ -220,10 +221,38 @@ for f=1:numel(freqs)
     end
 end
 
+switch method
+    case 'cosinefit'
+        % compute cosine fit
+cfg=[];
+                cfg.cosinefit.statistic = 'complex';
+                zx = 50;
+                centerphase = [0:2/zx:(zx-1)/(zx/2)]*pi-pi;
+for f=1:numel(rtbin)
+    for h=hemis
+        for ch=1:numel(data.label)
+            dat = rtbin{f}(:,h,ch);
+            s = statfun_cosinefit(cfg, dat', centerphase);
+            amp(f,h,ch) = abs(s.stat);
+            ang(f,h,ch) = angle(s.stat);
+            
+            tmp2 = squeeze(rtbinshuff{f}(:,h,ch,:));
+            for k=1:nperm
+                srand = statfun_cosinefit(cfg, tmp2(:,k)', centerphase);
+                amprand(k, f, h, ch) = abs(srand.stat);
+                angrand(k, f, h, ch) = angle(srand.stat);
+            end
+        end
+    end
+end
+
+y = (squeeze(amp)-squeeze(mean(amprand)))./squeeze(std(amprand));
+
+    case 'kldiv'
 % compute kl-divergence (deviation from uniformity)
 uniform = ones(nbins,1)/nbins;
 for f=1:numel(rtbin)
-    for h=1
+    for h=hemis
         for ch=1:numel(data.label)
             dat = rtbin{f}(:,h,ch);
             tmp2 = squeeze(rtbinshuff{f}(:,h,ch,:));
@@ -240,6 +269,7 @@ for f=1:numel(rtbin)
 end
 
 y=(kl-kl_u)./kl_std;
+end
 
 
 kl1 = rmfield(data, {'trial', 'time'});
@@ -270,3 +300,4 @@ if strcmp(model,'2d')
 else
     figure; ft_topoplotER(cfgp, kl1, kl2)
 end
+
