@@ -1,15 +1,15 @@
-subj=4;
+for subj=1:10
 datainfo;
 contrast = 'attended';
 method = 'glm_perm'; %cosinefit_perm, glm_perm
-hemis=[1];
-freqs = 4:1:30;%32:2:80];
+hemis=[1 2];
+freqs = [4:1:30];% 32:2:80];
 npermfiles = 10;
 
-centerphase = [0 1/3 2/3 1 4/3 5/3]*pi-pi;
 resultsdir = [projectdir 'results/collapsephasebin/'];
 % resultsdir = 'P:/3011085.02/phasecode/results/collapsephasebin/';
 % loading in data
+hcnt=1;
 for h=hemis
   if (strcmp(contrast, 'attended') || strcmp(contrast, 'unattended'))
     hemi = sprintf('hemi%d_', h);
@@ -20,18 +20,18 @@ for h=hemis
   % load the decoding results for every frequency
   cnt=1;
   for f=freqs
-    tmp{cnt} = load([resultsdir, sprintf('%s/10/sub%02d_decoding_%sf%d_%d', contrast, subj, hemi, f)]);
+    tmp{cnt} = load([resultsdir, sprintf('%s/sub%02d/sub%02d_decoding_%sf%d', contrast,subj, subj, hemi, f)]);
     tmp{cnt} = mean(mean(tmp{cnt}.accuracy,3),1);
     
     % now do the same for random phase bins
     if npermfiles==1
-      tmp2{cnt,1} = load([resultsdir, sprintf('%s/10/sub%02d_decoding_rand_%sf%d_%d', contrast, subj, hemi, f)]);
+      tmp2{cnt,1} = load([resultsdir, sprintf('%s/sub%02d/sub%02d_decoding_rand_%sf%d_', contrast, subj, subj, hemi, f)]);
       tmp2{cnt,1} = mean(mean(tmp2{cnt,1}.accuracy,4),2);
     else
-    for k=1:npermfiles
-      tmp2{cnt,k} = load([resultsdir, sprintf('%s/10/sub%02d_decoding_rand_%sf%d_%d%d', contrast, subj, hemi, f,k)]);
-      tmp2{cnt,k} = mean(mean(tmp2{cnt,k}.accuracy,4),2);
-    end
+      for k=1:npermfiles
+        tmp2{cnt,k} = load([resultsdir, sprintf('%s/sub%02d/sub%02d_decoding_rand_%sf%d_%d%d', contrast, subj, subj, hemi, f,k)]);
+        tmp2{cnt,k} = mean(mean(tmp2{cnt,k}.accuracy,4),2);
+      end
     end
     cnt=cnt+1;
   end
@@ -46,33 +46,50 @@ for h=hemis
     end
   end
   % restructuring decoding accuracies
-  acc = cat(1,tmp{:})';
-  acc_rand = cat(3,tmp2b{:});
+  acc(hcnt,:,:) = cat(1,tmp{:})';
+  acc_rand(hcnt,:,:,:) = cat(3,tmp2b{:});
+  hcnt=hcnt+1;
 end
 clear tmp*
 
-for f=1:numel(freqs)
-  % observed data
-  ampl(1,f) = fit_sine_nobins(acc(:,f), centerphase);
-  
-  % surrogate data
-  for k=1:size(acc_rand,1)
-    ampl_rand(k,f) = fit_sine_nobins(squeeze(acc_rand(k,:,f))', centerphase);
-  end
-end
+zx = size(acc,2);
+centerphase = [0:2/zx:(zx-1)/(zx/2)]*pi-pi;
+
 
 cfg=[];
-cfg.tail = 1;
-cfg.clustertail = 1;
-cfg.clusteralpha = 0.05;
-cfg.alpha = 0.05;
-cfg.dim = [1 numel(freqs)];
-cfg.feedback = 'yes';
+cfg.cosinefit.statistic = 'complex';
+for h=1:hcnt-1
+  % observed data
+  s = statfun_cosinefit(cfg, squeeze(acc(h,:,:))', centerphase);
+  amp(h,:) = abs(s.stat);
+  ang(h,:) = angle(s.stat);
+  
+  % surrogate data
+  tmp = reshape(permute(acc_rand, [1 3 4 2]), hcnt-1, length(centerphase), []);
+  s = statfun_cosinefit(cfg, squeeze(tmp(h,:,:))', centerphase);
+  amp_rand(h,:,:) = reshape(abs(s.stat), numel(freqs),[]);
+  ang_rand(h,:,:) = reshape(angle(s.stat), numel(freqs),[]);
+end
 
-cfg.numrandomization = 'all';
-cfg.clusterstatistic = 'max';
-cfg.clusterthreshold = 'nonparametric_common';
-cfg.multivariate = 'yes';
-stat = clusterstat(cfg, ampl_rand', ampl');
+arand{subj} = amp_rand;
+a{subj} = amp;
+keep subj a arand a2 arand2 freqs
+end
+% [subj mean(mean(mean(acc)))]
 
+% cfg=[];
+% cfg.tail = 1;
+% cfg.clustertail = 1;
+% cfg.clusteralpha = 0.05;
+% cfg.alpha = 0.05;
+% cfg.dim = [1 numel(freqs)];
+% cfg.feedback = 'yes';
+% 
+% cfg.numrandomization = 'all';
+% cfg.clusterstatistic = 'maxsum';
+% cfg.clusterthreshold = 'nonparametric_individual';
+% cfg.multivariate = 'yes';
+% for k=1:2
+%   stat(k) = clusterstat(cfg, squeeze(amp_rand(k,:,:)), amp(k,:)');
+% end
 
