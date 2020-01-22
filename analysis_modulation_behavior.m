@@ -126,6 +126,7 @@ end
 datainfo;
 addpath([projectdir, 'scripts/kldiv/']);
 contrast = 'attended';
+method = 'cosinefit';
 subj=4;
 model='2d';
 if strcmp(model, '2d')
