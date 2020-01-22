@@ -273,6 +273,19 @@ for irandperm = 1:nrandperm
     end
     clear bindat
   end
+  
+  if 0
+  tmpprimal_P = zeros(size(primal,1), size(primal,2), size(primal,3), nchan);
+  for k=1:size(primal,1)
+    for j=1:size(primal,2)
+      for i=1:size(primal,3)
+        tmpprimal_P(k,j,i,:) = primal{k,j,i}*P{k,j};
+      end
+    end
+  end
+  primal_P{irandperm} = permute(tmpprimal_P,[4 1 2 3]);
+end
+  
 end
 if size(accuracy,1)==1, accuracy = squeeze(accuracy); end
 
@@ -287,7 +300,11 @@ if ~do_randphasebin
   end
   primal_P = permute(primal_P,[4 1 2 3]);
 else
-  primal_P = [];
+  if exist('primal_P','var')
+    % do nothing
+  else
+    primal_P=[];
+  end
 end
 
 %% save
