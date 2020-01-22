@@ -54,8 +54,8 @@ load(filename)
 %   phasebin = phasebin{hemi};
 %   phase = phase{hemi};
 % else
-  phasebin = phasebin{mod(hemi,2)+1}; % for attention left, take right hemisphere phase.
-  phase = phase{mod(hemi,2)+1};
+phasebin = phasebin{mod(hemi,2)+1}; % for attention left, take right hemisphere phase.
+phase = phase{mod(hemi,2)+1};
 
 
 % end
@@ -66,7 +66,7 @@ if 1 % only use data after the main ERF (post 400 ms)
   time(1:80)=[];
   phasebin(:,1:80)=[];
   phase(:,1:80) = [];
-end 
+end
 
 nchan = numel(data.label);
 ncond = 2;
@@ -168,16 +168,16 @@ for irandperm = 1:nrandperm
         bindat{bin,k}.trial = bindat{bin,k}.trial(usesmp{k}(:,bin),:);
         nsamp_cond(bin,k) = numel(usesmp{k}(:, bin));
       else
-      % select samples with particular phase
-      if bin==1
-        % deal with wrap around 0
-        sampinbin = phase{k}-2*pi>=centerphase(bin)|phase{k}<centerphase(bin+2);
-      else
-        sampinbin = phase{k}>=centerphase(bin)&phase{k}<centerphase(bin+2);
-      end
-      
-      nsamp_cond(bin,k) = sum(sampinbin);
-      bindat{bin,k}.trial = bindat{bin,k}.trial(sampinbin,:);
+        % select samples with particular phase
+        if bin==1
+          % deal with wrap around 0
+          sampinbin = phase{k}-2*pi>=centerphase(bin)|phase{k}<centerphase(bin+2);
+        else
+          sampinbin = phase{k}>=centerphase(bin)&phase{k}<centerphase(bin+2);
+        end
+        
+        nsamp_cond(bin,k) = sum(sampinbin);
+        bindat{bin,k}.trial = bindat{bin,k}.trial(sampinbin,:);
       end
     end
   end
@@ -195,8 +195,8 @@ for irandperm = 1:nrandperm
     fprintf('computing permutation %d/%d\n',iperm,nperm);
     bindat = bindat_orig;
     % select same amount of data for each condition, and each bin.
-
-%{
+    
+    %{
 %% the commented out section is on average 5 times as slow as the sparse multiplication
 %
 %     % select same amount of data for each condition, and each bin.
@@ -204,20 +204,20 @@ for irandperm = 1:nrandperm
 %       for k=1:2
 %         tmpidx = randperm(nsamp_cond(bin,k));
 %         bindat{bin,k}.trial = bindat{bin,k}.trial(tmpidx(1:nsmp),:);
-%         
+%
 %         % increase SNR by averaging trials randomly
 %         groupsize = 10;
 %         ngroups = floor(nsmp/groupsize);
 %         bindat{bin,k} = randavg_trials(bindat{bin,k}, ngroups, groupsize);
 %       end
 %     end
-%}
+    %}
     for bin = 1:nbins
-      P    = sparse(x,y,z,ngroups,size(bindat{bin,1}.trial,1));
-      tmp1 = P(:,randperm(size(P,2)))*bindat{bin,1}.trial;
-      P    = sparse(x,y,z,ngroups,size(bindat{bin,2}.trial,1));
-      tmp2 = P(:,randperm(size(P,2)))*bindat{bin,2}.trial;
-       
+      tmpP    = sparse(x,y,z,ngroups,size(bindat{bin,1}.trial,1));
+      tmp1 = tmpP(:,randperm(size(tmpP,2)))*bindat{bin,1}.trial;
+      tmpP    = sparse(x,y,z,ngroups,size(bindat{bin,2}.trial,1));
+      tmp2 = tmpP(:,randperm(size(tmpP,2)))*bindat{bin,2}.trial;
+      
       if do_prewhiten==2
         tmp     = [tmp1;tmp2];
         tmp     = tmp-mean(tmp);
@@ -225,13 +225,13 @@ for irandperm = 1:nrandperm
         diagS   = diag(s);
         thr     = 0.99;
         
-        sel     = find(cumsum(diagS)./sum(diagS)<=thr);
-        P       = diag(1./sqrt(diagS(sel)))*u(:,sel)';
-        tmp1    = tmp1*P';
-        tmp2    = tmp2*P';
+        sel            = find(cumsum(diagS)./sum(diagS)<=thr);
+        P{iperm, bin} = diag(1./sqrt(diagS(sel)))*u(:,sel)';
+        tmp1           = tmp1*P{iperm, bin}';
+        tmp2           = tmp2*P{iperm, bin}';
       end
       bindat{bin,1}.trial = tmp1;
-      bindat{bin,2}.trial = tmp2;  
+      bindat{bin,2}.trial = tmp2;
     end
     
     %% decoding
@@ -250,7 +250,7 @@ for irandperm = 1:nrandperm
         % select data per fold and pre-whiten
         indx_testtrials = sum(groupsize_fold(1,1:ifold))-groupsize_fold(ifold)+1:sum(groupsize_fold(1,1:ifold));
         [traindata, testdata, traindesign, testdesign, tmpP] = dml_preparedata(bindat(bin,:), indx_testtrials, 1, do_prewhiten);
-        if ~isempty(tmpP), P=tmpP; end
+        if ~isempty(tmpP), tmpP=tmpP; end
         
         % initialize model
         model          = dml.svm;
@@ -304,12 +304,12 @@ end
 
 % save variables
 settings = struct('avgtrials', do_avgtrials, 'correcttrials', do_correcttrials, 'contrast', contrast,'prewhiten', do_prewhiten>0, 'var', vararg, 'nperm',nperm, 'nrandperm', nrandperm);
-if ~exist('primal', 'var') || do_randphasebin, primal=[]; end
+if ~exist('primal', 'var') || do_randphasebin, primal=[];P=[]; end
 rnumb=rng;
 if dosave
-    if isempty(tmpfilename)
-      save(filename, 'accuracy','settings', 'primal', 'P', 'rnumb')
-    else
-      save(tmpfilename, 'accuracy', 'rnumb')
-    end
+  if isempty(tmpfilename)
+    save(filename, 'accuracy','settings', 'primal', 'P', 'rnumb')
+  else
+    save(tmpfilename, 'accuracy', 'rnumb')
+  end
 end
