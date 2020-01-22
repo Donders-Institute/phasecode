@@ -49,7 +49,7 @@ fs = data.fsample;
 % divide trials into phase bins
 filename = [projectdir, 'results/phase/', sprintf('sub%02d_phase_%d', subj, f(1))];
 load(filename)
-[phasebin, phase, ~, time]  = analysis_phase(subj, f(1), [], 3, false);
+% [phasebin, phase, ~, time]  = analysis_phase(subj, f(1), [], 3, false);
 % if strcmp(contrast, 'unattended')
 %   phasebin = phasebin{hemi};
 %   phase = phase{hemi};
@@ -276,6 +276,20 @@ for irandperm = 1:nrandperm
 end
 if size(accuracy,1)==1, accuracy = squeeze(accuracy); end
 
+if ~do_randphasebin
+  primal_P = zeros(size(primal,1), size(primal,2), size(primal,3), nchan);
+  for k=1:size(primal,1)
+    for j=1:size(primal,2)
+      for i=1:size(primal,3)
+        primal_P(k,j,i,:) = primal{k,j,i}*P{k,j};
+      end
+    end
+  end
+  primal_P = permute(primal_P,[4 1 2 3]);
+else
+  primal_P = [];
+end
+
 %% save
 vararg = [];
 % make filename
@@ -289,7 +303,7 @@ switch contrast
   case 'unattended'
     filename = [filename, 'unattended/'];
 end
-filename = [filename, sprintf('sub%02d/phase3/sub%02d_decoding', subj, subj)];
+filename = [filename, sprintf('sub%02d/sub%02d_decoding', subj, subj)];
 if do_randphasebin
   filename = [filename, '_rand'];
 end
@@ -308,7 +322,7 @@ if ~exist('primal', 'var') || do_randphasebin, primal=[];P=[]; end
 rnumb=rng;
 if dosave
   if isempty(tmpfilename)
-    save(filename, 'accuracy','settings', 'primal', 'P', 'rnumb')
+    save(filename, 'accuracy','settings', 'primal', 'primal_P', 'rnumb')
   else
     save(tmpfilename, 'accuracy', 'rnumb')
   end
