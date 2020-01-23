@@ -1,4 +1,4 @@
-function [dat, dat_append] = phasecode_loaddata(subj, varargin)
+function [dat, dat_append] = phasecode_getdata(subj, varargin)
 
 doparc = ft_getopt(varargin, 'doparc', false);
 
