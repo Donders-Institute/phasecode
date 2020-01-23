@@ -8,24 +8,11 @@ if ~exist('method', 'var'), method = 'cosinefit'; end
 for subj=1:10
     subj
     if strcmp(model, '2d')
-        load([projectdir, sprintf('results/tlck/sub%02d_sourceparc.mat', subj)])
+        doparc = true;
+    else
+      doparc = false;
     end
-    cfg=[];
-    cnt=1;
-    for ses=subjects(subj).validsessions
-        filename = [datadir, sprintf('sub%02d/meg%02d/sub%02d-meg%02d_cleandata.mat', subj, ses, subj, ses)];
-        dat{cnt} = load(filename, 'data');
-        dat{cnt} = removefields(dat{cnt}.data, 'elec');
-        if strcmp(model, '2d')
-            for k=1:numel(dat{cnt}.trial)
-                dat{cnt}.trial{k} = source_parc{1}.F * dat{cnt}.trial{k};
-            end
-            dat{cnt}.label = source_parc{cnt}.label;
-        end
-        cnt=cnt+1;
-    end
-    cfg.appenddim = 'rpt';
-    data_all = ft_appenddata(cfg, dat{:});
+[~, data_all] = phasecode_getdata(subj, 'doparc', doparc);
     
     freqs=4:1:30;
     cnt=0;
@@ -130,29 +117,13 @@ method = 'cosinefit';
 subj=4;
 model='2d';
 if strcmp(model, '2d')
-    load([projectdir, sprintf('results/tlck/sub%02d_sourceparc.mat', subj)])
+    doparc = true;
     load atlas_subparc374_8k.mat
+else
+  doparc = false;
 end
-cfg=[];
-cnt=1;
-for ses=subjects(subj).validsessions
-    filename = [datadir, sprintf('sub%02d/meg%02d/sub%02d-meg%02d_cleandata.mat', subj, ses, subj, ses)];
-    dat{cnt} = load(filename, 'data');
-    dat{cnt} = removefields(dat{cnt}.data, 'elec');
-    if strcmp(model, '2d')
-        for k=1:numel(dat{cnt}.trial)
-            dat{cnt}.trial{k} = source_parc{1}.F * dat{cnt}.trial{k};
-        end
-        dat{cnt}.label = source_parc{cnt}.label;
-    end
-    cnt=cnt+1;
-end
-cfg.appenddim = 'rpt';
-data = ft_appenddata(cfg, dat{:});
-% ses=2;
-%
-% filename = [datadir, sprintf('sub%02d/meg%02d/sub%02d-meg%02d_cleandata.mat', subj, ses, subj, ses)];
-% load(filename, 'data')
+[~, data] = phasecode_getdata(subj, 'doparc', doparc);
+
 cfg=[];
 cfg.trials = (data.trialinfo(:,7)==1) & (data.trialinfo(:,1)==data.trialinfo(:,4));
 data = ft_selectdata(cfg, data);
