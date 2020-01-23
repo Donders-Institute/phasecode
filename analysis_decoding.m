@@ -18,6 +18,8 @@ groupsize           = ft_getopt(varargin, 'groupsize',           10);
 binoverlap          = ft_getopt(varargin, 'binoverlap',          false);
 tmpfilename         = ft_getopt(varargin, 'tmpfilename',         []);
 dosave              = ft_getopt(varargin, 'dosave',              true);
+doparc              = ft_getopt(varargin, 'doparc',              false);
+whichparc           = ft_getopt(varargin, 'whichparc',           []);
 
 if ~do_randphasebin, nrandperm = 1; end
 if isempty(rngseed)
@@ -49,14 +51,19 @@ fs = data.fsample;
 % divide trials into phase bins
 filename = [projectdir, 'results/phase/', sprintf('sub%02d_phase_%d', subj, f(1))];
 load(filename)
-% [phasebin, phase, ~, time]  = analysis_phase(subj, f(1), [], 3, false);
-% if strcmp(contrast, 'unattended')
-%   phasebin = phasebin{hemi};
-%   phase = phase{hemi};
-% else
-phasebin = phasebin{mod(hemi,2)+1}; % for attention left, take right hemisphere phase.
-phase = phase{mod(hemi,2)+1};
-
+% [phasebin, phase, ~, time]  = analysis_phase(subj, f(1), [], 3, [], false);
+if doparc
+  [phasebin, phase, ~, time] = analysis_phase(subj, f(1), [], 2, 'parc', false, 'whichparc', whichparc);
+  phase = phase{1};
+  phasebin = phasebin{1};
+else
+  % if strcmp(contrast, 'unattended')
+  %   phasebin = phasebin{hemi};
+  %   phase = phase{hemi};
+  % else
+  phasebin = phasebin{mod(hemi,2)+1}; % for attention left, take right hemisphere phase.
+  phase = phase{mod(hemi,2)+1};
+end
 
 % end
 phasebin(~idx,:)=[];
@@ -320,14 +327,14 @@ switch contrast
   case 'unattended'
     filename = [filename, 'unattended/'];
 end
-filename = [filename, sprintf('sub%02d/sub%02d_decoding', subj, subj)];
+filename = [filename, sprintf('sub%02d/parc/sub%02d_decoding', subj, subj)];
 if do_randphasebin
   filename = [filename, '_rand'];
 end
 if strcmp(contrast, 'attended') || strcmp(contrast, 'unattended')
   filename = [filename, sprintf('_hemi%d', hemi)];
 end
-filename = [filename, sprintf('_f%d', f)];
+filename = [filename, sprintf('_f%d_%d', f, whichparc)];
 
 if exist('randnr', 'var') && ~isempty(randnr)
   filename = [filename, sprintf('_%d', randnr)];
