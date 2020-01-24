@@ -286,7 +286,7 @@ for irandperm = 1:nrandperm
   for k=1:size(primal,1)
     for j=1:size(primal,2)
       for i=1:size(primal,3)
-        tmpprimal_P(k,j,i,:) = primal{k,j,i}*P{k,j};
+        tmpprimal_P(k,j,i,:) = primal{k,j,i}*pinv(P{k,j})';
       end
     end
   end
@@ -301,7 +301,7 @@ if ~do_randphasebin
   for k=1:size(primal,1)
     for j=1:size(primal,2)
       for i=1:size(primal,3)
-        primal_P(k,j,i,:) = primal{k,j,i}*P{k,j};
+        primal_P(k,j,i,:) = primal{k,j,i}*pinv(P{k,j})';
       end
     end
   end
