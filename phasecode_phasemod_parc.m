@@ -17,11 +17,11 @@ selparc = setdiff(1:numel(atlas.parcellationlabel),exclude_label); % hard coded 
 
 for h=hemis
   for k=1:nparc
-    tmp1{k} = load([tdir, sprintf('sub%02d_decoding_hemi1_f10_%d',subj, k)], 'accuracy');
+    tmp1{k} = load([tdir, sprintf('sub%02d_decoding_hemi%d_f10_%d',subj,h, k)], 'accuracy');
     tmp1{k} = tmp1{k}.accuracy;
     
     for l=1:npermfiles
-      tmp2{k,l} = load([tdir, sprintf('sub%02d_decoding_rand_hemi1_f10_%d_%d',subj,k,l)], 'accuracy');
+      tmp2{k,l} = load([tdir, sprintf('sub%02d_decoding_rand_hemi%d_f10_%d_%d',subj,h,k,l)], 'accuracy');
       tmp2{k,l} = tmp2{k,l}.accuracy;
     end
     tmp2{k,1} = cat(1,tmp2{k,:});
