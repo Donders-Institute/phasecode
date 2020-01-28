@@ -44,6 +44,7 @@ end
 cfg=[];
 if strcmp(chansel, 'eye')
   tmp = preprocessing_eyedata(subj, tmp, false);
+  chansel_orig=chansel;
   chansel = {'UADC005','UADC006','UADC007'};
 end
 cfg.channel = chansel;
@@ -329,39 +330,6 @@ else
 end
 
 %% save
-vararg = [];
-% make filename
-filename = [projectdir 'results/collapsephasebin/'];
-
-switch contrast
-  case 'congruent'
-    filename = [filename, 'congruent/'];
-  case 'attended'
-    filename = [filename, 'attended/'];
-  case 'unattended'
-    filename = [filename, 'unattended/'];
-end
-filename = [filename, sprintf('sub%02d/sub%02d_decoding', subj, subj)];
-if do_randphasebin
-  filename = [filename, '_rand'];
-end
-if strcmp(contrast, 'attended') || strcmp(contrast, 'unattended')
-  filename = [filename, sprintf('_hemi%d', hemi)];
-end
-filename = [filename, sprintf('_f%d_%d', f, whichparc)];
-
-if exist('randnr', 'var') && ~isempty(randnr)
-  filename = [filename, sprintf('_%d', randnr)];
-end
-
-% save variables
-settings = struct('avgtrials', do_avgtrials, 'correcttrials', do_correcttrials, 'contrast', contrast,'prewhiten', do_prewhiten>0, 'var', vararg, 'nperm',nperm, 'nrandperm', nrandperm);
-if ~exist('primal', 'var') || do_randphasebin, primal=[];P=[]; end
-rnumb=rng;
 if dosave
-  if isempty(tmpfilename)
-    save(filename, 'accuracy','settings', 'primal', 'primal_P', 'rnumb')
-  else
-    save(tmpfilename, 'accuracy', 'rnumb')
-  end
+  analysis_decoding_savescript
 end
