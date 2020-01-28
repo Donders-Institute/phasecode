@@ -6,7 +6,7 @@ Subject="$2"
 FreeSurferFolder="$1"/"$Subject"
 
 # This one is hard-coded
-SurfaceAtlasDIR=/project/3011085.02/scripts/atlas/standard_mesh_atlases
+SurfaceAtlasDIR=/project/3011085.02/phasecode/scripts/atlas/standard_mesh_atlases
 
 LowResMeshes=4@8@32
 LowResMeshes=`echo ${LowResMeshes} | sed 's/@/ /g'`

@@ -8,11 +8,11 @@ source $FREESURFER_HOME/SetUpFreeSurfer.sh
 mkdir $SUBJECTS_DIR/$2/mri
 
 cd $SUBJECTS_DIR
-cp -f $1/$2/mni_resliced.mgz $SUBJECTS_DIR/$2/mri
+cp -f $1/mni_resliced.mgz $SUBJECTS_DIR/$2/mri
 cp -f $1/$2/skullstrip.mgz $SUBJECTS_DIR/$2/mri
 
 cd $SUBJECTS_DIR/$2/mri
-mri_convert -c -oc 0 0 0 $1/$2/mni_resliced.mgz orig.mgz
+mri_convert -c -oc 0 0 0 $1/mni_resliced.mgz orig.mgz
 mri_convert -c -oc 0 0 0 $1/$2/skullstrip.mgz brainmask.mgz
 
 recon-all -talairach -subjid $2
