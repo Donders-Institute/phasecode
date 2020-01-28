@@ -31,9 +31,6 @@ sourcemodel = anatomy_sourcemodel3d(subj, mri_defaced, transform_vox2ctf);
 %% 2d sourcemodel
 datainfo
 mri = ft_read_mri([projectdir, sprintf('results/anatomy/sub%02d/mni_resliced.mgz',subj)]);
-% load([projectdir, sprintf('results/anatomy/sub%02d/transform_vox2ctf.mat', subj)]);
-% mri.transform = eye(4);
-% mri = ft_transform_geometry(transform_vox2ctf, mri);
 anatomy_skullstrip(subj, mri);
 
 qsubfeval(@qsub_anatomy_freesurfer,subj, 1,...
