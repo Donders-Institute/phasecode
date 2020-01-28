@@ -5,8 +5,7 @@ function [sourcemodel] = anatomy_sourcemodel2d(subj)
 datainfo;
 mridir = [projectdir, sprintf('results/anatomy/sub%02d/', subj)];
 filename_sourcemodel= fullfile(mridir, 'sourcemodel2d.mat');
-mridir = [mridir, 'preproc/'];
-workbench_dir = fullfile(mridir, '/workbench/');
+workbench_dir = fullfile(mridir, 'preproc/workbench/');
 
 
 % load in the cortical sheet
