@@ -20,6 +20,8 @@ tmpfilename         = ft_getopt(varargin, 'tmpfilename',         []);
 dosave              = ft_getopt(varargin, 'dosave',              true);
 doparc              = ft_getopt(varargin, 'doparc',              false);
 whichparc           = ft_getopt(varargin, 'whichparc',           []);
+do_posterf          = ft_getopt(varargin, 'do_posterf',          true);
+chansel             = ft_getopt(varargin, 'chansel',             'MEG');
 
 if ~do_randphasebin, nrandperm = 1; end
 if isempty(rngseed)
@@ -39,7 +41,16 @@ for ses=subjects(subj).validsessions
   tmp{cnt} = removefields(tmp{cnt}.data, 'elec');
   cnt=cnt+1;
 end
+cfg=[];
+if strcmp(chansel, 'eye')
+  tmp = preprocessing_eyedata(subj, tmp, false);
+  chansel = {'UADC005','UADC006','UADC007'};
+end
+cfg.channel = chansel;
+
+
 data = ft_appenddata([], tmp{:});
+data = ft_selectdata(cfg, data);
 clear tmp
 
 fs = data.fsample;
@@ -69,10 +80,12 @@ end
 phasebin(~idx,:)=[];
 phase(~idx,:)=[];
 
-if 1 % only use data after the main ERF (post 400 ms)
-  time(1:80)=[];
-  phasebin(:,1:80)=[];
-  phase(:,1:80) = [];
+if do_posterf % only use data after the main ERF (post 400 ms)
+  x1 = nearest(time,0.4);
+  x2 = nearest(time,1.0);
+  time = time(x1:x2);
+  phasebin = phasebin(:,x1:x2);
+  phase = phase(:, x1:x2);
 end
 
 nchan = numel(data.label);
@@ -93,6 +106,7 @@ if do_correcttrials
   phase(rmtrials,:,:)=[];
   phasebin(rmtrials,:,:)=[];
 end
+
 data_orig=data;
 
 
@@ -281,7 +295,7 @@ for irandperm = 1:nrandperm
     clear bindat
   end
   
-  if 0
+  if do_randphasebin
   tmpprimal_P = zeros(size(primal,1), size(primal,2), size(primal,3), nchan);
   for k=1:size(primal,1)
     for j=1:size(primal,2)
@@ -296,7 +310,7 @@ end
 end
 if size(accuracy,1)==1, accuracy = squeeze(accuracy); end
 
-if ~do_randphasebin
+if ~do_randphasebin && do_prewhiten==2
   primal_P = zeros(size(primal,1), size(primal,2), size(primal,3), nchan);
   for k=1:size(primal,1)
     for j=1:size(primal,2)
@@ -327,7 +341,7 @@ switch contrast
   case 'unattended'
     filename = [filename, 'unattended/'];
 end
-filename = [filename, sprintf('sub%02d/parc/sub%02d_decoding', subj, subj)];
+filename = [filename, sprintf('sub%02d/sub%02d_decoding', subj, subj)];
 if do_randphasebin
   filename = [filename, '_rand'];
 end
