@@ -3,7 +3,6 @@ if ~exist('contrast', 'var') || nargin<2,       contrast = 'congruent'; end
 if ~exist('subj', 'var')     || nargin<1,       subj=4; end
 
 do_correcttrials    = ft_getopt(varargin, 'do_correcttrials',    false);
-do_avgtrials        = ft_getopt(varargin, 'do_avgtrials',        false);
 do_prewhiten        = ft_getopt(varargin, 'do_prewhiten',        0);
 randnr              = ft_getopt(varargin, 'randnr',              []);
 rngseed             = ft_getopt(varargin, 'rngseed',             []);
@@ -77,7 +76,7 @@ else
   phase = phase{mod(hemi,2)+1};
 end
 
-% end
+
 phasebin(~idx,:)=[];
 phase(~idx,:)=[];
 
