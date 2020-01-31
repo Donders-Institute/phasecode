@@ -139,6 +139,13 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% phasic modulation of reaction times in 2D space %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% compute spatial filters for cortical sheet parcels
+if do_qsubfeval
+  qsubfeval(@execute_pipeline, 'analysis_lcmv_script', subj, {'doparc', true}, 'timreq', 3600, 'memreq', 12*1024^3);
+else
+  execute_pipeline('analysis_lcmv_script', subj, {'do_virtualchan', true});
+end
+
 if do_qsubfeval
   qsubfeval(@analysis_modulation_behavior, subj, 'model', '2d', 'method','cosinefit',...
     'freqs', freqs, 'timreq', 4*1024^3, 'memreq', 12*1024^3);
