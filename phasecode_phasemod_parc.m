@@ -69,6 +69,7 @@ end
 
 cfgp = [];
 cfgp.funparameter = 'stat';
+cfgp.funcolormap = 'hot';%brewermap(12, 'GnBu');
 ft_sourcemovie(cfgp, source);
 
 
