@@ -1,4 +1,4 @@
-function [accuracy,centerphase,primal] = analysis_decoding(subj, contrast, varargin)
+function [accuracy,centerphase,primal_P] = analysis_decoding(subj, contrast, varargin)
 if ~exist('contrast', 'var') || nargin<2,       contrast = 'congruent'; end
 if ~exist('subj', 'var')     || nargin<1,       subj=4; end
 
@@ -42,9 +42,9 @@ for ses=subjects(subj).validsessions
   cnt=cnt+1;
 end
 cfg=[];
+chansel_orig=chansel;
 if strcmp(chansel, 'eye')
   tmp = preprocessing_eyedata(subj, tmp, false);
-  chansel_orig=chansel;
   chansel = {'UADC005','UADC006','UADC007'};
 end
 cfg.channel = chansel;
@@ -123,7 +123,6 @@ for k=1:size(idx_ori,1)
     dat{k}.trial = dat{k}.trial(cfg.trials);
     dat{k}.time = dat{k}.time(cfg.trials);
     dat{k}.trialinfo = dat{k}.trialinfo(cfg.trials,:);
-    dat{k}.sampleinfo = dat{k}.sampleinfo(cfg.trials,:);
   else
     dat{k} = ft_selectdata(cfg, data);
   end
@@ -147,7 +146,7 @@ end
 
 for irandperm = 1:nrandperm
   for k=1:numel(phasebin_orig)
-    if do_randphasebin
+    if do_randphasebin && ~strcmp(chansel_orig,'eye')
       % circularly shift each row by a random amount, maximal 1 period
       % forward or backward in time.
       [s1, s2] = size(phasebin_orig{k});
@@ -273,7 +272,9 @@ for irandperm = 1:nrandperm
         indx_testtrials = sum(groupsize_fold(1,1:ifold))-groupsize_fold(ifold)+1:sum(groupsize_fold(1,1:ifold));
         [traindata, testdata, traindesign, testdesign, tmpP] = dml_preparedata(bindat(bin,:), indx_testtrials, 1, do_prewhiten);
         if ~isempty(tmpP), tmpP=tmpP; end
-        
+        if do_randphasebin && strcmp(chansel_orig,'eye')
+          traindesign = traindesign(randperm(numel(traindesign)));
+        end
         % initialize model
         model          = dml.svm;
         model.kernel   = 'precomp';
@@ -296,7 +297,7 @@ for irandperm = 1:nrandperm
     clear bindat
   end
   
-  if do_randphasebin
+  if do_randphasebin && ~strcmp(chansel_orig, 'eye') && ~doparc
   tmpprimal_P = zeros(size(primal,1), size(primal,2), size(primal,3), nchan);
   for k=1:size(primal,1)
     for j=1:size(primal,2)
