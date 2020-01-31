@@ -5,10 +5,10 @@ datainfo;
 %% load anatomical data
 mridir = [projectdir, sprintf('results/anatomy/sub%02d/', subj)];
 if strcmp(model, '2d')
-    load([mridir, 'sourcemodel2d'])
-    load atlas_subparc374_8k.mat
+  load([mridir, 'sourcemodel2d'])
+  load atlas_subparc374_8k.mat
 else
-    load([mridir, 'sourcemodel3d'])
+  load([mridir, 'sourcemodel3d'])
 end
 load([mridir, 'headmodel'])
 headmodel = ft_convert_units(headmodel, 'm');
@@ -28,7 +28,7 @@ end
 fs = dat{1}.fsample;
 
 
-for k=1:numel(dat)  
+for k=1:numel(dat)
   cfg         = [];
   cfg.latency = [-0.25+1/fs 1.2];
   dat{k}        = ft_selectdata(cfg, dat{k});
