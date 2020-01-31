@@ -17,11 +17,11 @@ if ~isdir(filename)
 end
 
 if doparc
-  filename = [filename, 'parc'];
-elseif 1%exist('primal_P','var') && do_randphasebin
-  filename = [filename, 'primalp'];
-elseif strcmp(chansel_orig, 'eye')
+  filename = [filename, 'parc/'];
+elseif strcmp(chansel_orig, 'eye/')
   filename = [filename, 'eye'];
+elseif 1%exist('primal_P','var') && do_randphasebin
+  filename = [filename, 'primalp/'];
 end
 
 filename = [filename, sprintf('sub%02d_decoding', subj)];
