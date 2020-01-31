@@ -1,15 +1,17 @@
 function analysis_modulation_behavior(subj, varargin)
 
 contrast = ft_getopt(varargin, 'contrast', 'attended');
-method = ft_getopt(varargin, 'method', 'cosinefit');
-model = ft_getopt(varargin, 'model', '2d');
-freqs = ft_getopt(varargin, 'freqs', 4:1:30);
-nbins = ft_getopt(varargin, 'nbins', 50);
-nperm = ft_getopt(varargin, 'nperm', 100);
-hemis = ft_getopt(varargin, 'hemis', [1 2]);
+method   = ft_getopt(varargin, 'method',   'cosinefit');
+model    = ft_getopt(varargin, 'model',    '2d');
+freqs    = ft_getopt(varargin, 'freqs',    4:1:30);
+nbins    = ft_getopt(varargin, 'nbins',    50);
+nperm    = ft_getopt(varargin, 'nperm',    100);
+hemis    = ft_getopt(varargin, 'hemis',    [1 2]);
 
 datainfo;
-addpath([projectdir, 'scripts/kldiv/']);
+if strcmp(method, 'kldiv')
+  addpath([projectdir, 'scripts/kldiv/']);
+end
 
 if strcmp(model, '2d')
   doparc = true;
@@ -19,6 +21,7 @@ else
 end
 [~, data] = phasecode_getdata(subj, 'doparc', doparc);
 
+% only select validly cued and correct trials
 cfg=[];
 cfg.trials = (data.trialinfo(:,7)==1) & (data.trialinfo(:,1)==data.trialinfo(:,4));
 data = ft_selectdata(cfg, data);
