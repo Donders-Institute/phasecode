@@ -6,7 +6,7 @@ function execute_pipeline(pipelinename, subj, varargin)
 %
 % example use in combination with qsubfeval:
 %
-% qsubfeval('erfosc_superscript', 1, {'someothervariable' value}, 'memreq', memreq, 'timreq', timreq);
+% qsubfeval('erfosc_superscript', 1, {'someothervariable', value}, 'memreq', memreq, 'timreq', timreq);
 % 
 % example use (standalone; not so useful):
 %
