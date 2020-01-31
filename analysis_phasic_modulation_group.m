@@ -1,8 +1,14 @@
-function analysis_phasic_modulation_group
+function analysis_phasic_modulation_group(varargin)
+
+doparc = ft_getopt(varargin, 'doparc', 'false');
+
 datainfo
 
 for k=valid_subjects
-  filename = [projectdir, sprintf('results/modulation/sub%02d_phasicmodulation_decoding.mat', subj)];
+  filename = [projectdir, sprintf('results/modulation/sub%02d_phasicmodulation_decoding', subj)];
+  if doparc
+    filename = [filename, '_parc'];
+  end
   tmp{k} = load(filename, 'amp', 'amprand', 'ang');
 end
 
@@ -24,5 +30,8 @@ for k=1:2
   stat(k) = clusterstat(cfg, squeeze(amp_rand(k,:,:)), amp(k,:)');
 end
 
-filename = [projectdir, 'results/stat_phasicmodulation_decoding.mat'];
+filename = [projectdir, 'results/stat_phasicmodulation_decoding'];
+if doparc
+  filename = [filename, '_parc'];
+end
 save(filename, 'stat')
