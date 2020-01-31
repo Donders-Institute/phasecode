@@ -154,7 +154,7 @@ rt = data.trialinfo(:,6);
 phi=cat(3,phase{:});
 hemis= [1 2];
 nbins=50;
-nperm = 1000;
+nperm = 100;
 bins = [0:2/nbins:2*(nbins-1)/nbins]*pi;
 nfreq = numel(freqs);
 
@@ -279,4 +279,6 @@ if strcmp(model,'2d')
 else
     figure; ft_topoplotER(cfgp, stat{1}, stat{2})
 end
+
+save(sprintf('sub%02d_cosinefit_behavior_parc.mat', subj), 'stat', 'ang','amp', 'amprand', 'angrand','phase')
 
