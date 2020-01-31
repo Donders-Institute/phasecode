@@ -12,16 +12,16 @@ switch contrast
 end
 filename = [filename, sprintf('sub%02d/', subj)];
 
-if ~isdir(filename)
-  mkdir(filename)
-end
-
 if doparc
   filename = [filename, 'parc/'];
 elseif strcmp(chansel_orig, 'eye/')
   filename = [filename, 'eye'];
-elseif 1%exist('primal_P','var') && do_randphasebin
+elseif exist('primal_P','var') && do_randphasebin
   filename = [filename, 'primalp/'];
+end
+
+if ~isdir(filename)
+  mkdir(filename)
 end
 
 filename = [filename, sprintf('sub%02d_decoding', subj)];
