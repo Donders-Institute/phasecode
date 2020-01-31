@@ -1,13 +1,16 @@
-for subj=1:10
+function analysis_phasic_modulation(subj, varargin)
+
+contrast   = ft_getopt(varargin, 'contrast', 'attended');
+hemis      = ft_getopt(varargin, 'hemis',    [1 2]);
+freqs      = ft_getopt(varargin, 'freqs',    4:1:30);
+npermfiles = ft_getopt(varargin, npermfiles, 10);
+dosave     = ft_getopt(varargin, 'dosave',   true);
+doparc     = ft_getopt(varargin, 'doparc',   false);
+
 datainfo;
-contrast = 'attended';
-method = 'glm_perm'; %cosinefit_perm, glm_perm
-hemis=[1 2];
-freqs = [4:1:30];% 32:2:80];
-npermfiles = 10;
+
 
 resultsdir = [projectdir 'results/collapsephasebin/'];
-% resultsdir = 'P:/3011085.02/phasecode/results/collapsephasebin/';
 % loading in data
 hcnt=1;
 for h=hemis
@@ -20,19 +23,19 @@ for h=hemis
   % load the decoding results for every frequency
   cnt=1;
   for f=freqs
-    tmp{cnt} = load([resultsdir, sprintf('%s/sub%02d/sub%02d_decoding_%sf%d', contrast,subj, subj, hemi, f)]);
+    filedir = [resultsdir, sprintf('%s/sub%02d/', contrast,subj)];
+    if doparc
+      filedir = [filedir, 'parc/'];
+    end
+    filename = [filedir, sprintf('sub%02d_decoding_%sf%d', subj, hemi, f)];
+    tmp{cnt} = load(filename);
     tmp{cnt} = mean(mean(tmp{cnt}.accuracy,3),1);
     
     % now do the same for random phase bins
-    if npermfiles==1
-      tmp2{cnt,1} = load([resultsdir, sprintf('%s/sub%02d/sub%02d_decoding_rand_%sf%d_', contrast, subj, subj, hemi, f)]);
-      tmp2{cnt,1} = mean(mean(tmp2{cnt,1}.accuracy,4),2);
-    else
       for k=1:npermfiles
-        tmp2{cnt,k} = load([resultsdir, sprintf('%s/sub%02d/sub%02d_decoding_rand_%sf%d_%d%d', contrast, subj, subj, hemi, f,k)]);
+        tmp2{cnt,k} = load([filedir, sprintf('sub%02d_decoding_rand_%sf%d_%d%d', subj, hemi, f,k)]);
         tmp2{cnt,k} = mean(mean(tmp2{cnt,k}.accuracy,4),2);
       end
-    end
     cnt=cnt+1;
   end
   if size(tmp2,2)>1
@@ -71,25 +74,10 @@ for h=1:hcnt-1
   ang_rand(h,:,:) = reshape(angle(s.stat), numel(freqs),[]);
 end
 
-arand{subj} = amp_rand;
-a{subj} = amp;
-keep subj a arand a2 arand2 freqs
-end
-% [subj mean(mean(mean(acc)))]
-
-% cfg=[];
-% cfg.tail = 1;
-% cfg.clustertail = 1;
-% cfg.clusteralpha = 0.05;
-% cfg.alpha = 0.05;
-% cfg.dim = [1 numel(freqs)];
-% cfg.feedback = 'yes';
-% 
-% cfg.numrandomization = 'all';
-% cfg.clusterstatistic = 'maxsum';
-% cfg.clusterthreshold = 'nonparametric_individual';
-% cfg.multivariate = 'yes';
-% for k=1:2
-%   stat(k) = clusterstat(cfg, squeeze(amp_rand(k,:,:)), amp(k,:)');
-% end
-
+if dosave
+  filedir = [projectdir, 'results/modulation/']; 
+  filename = [filedir, sprintf('sub%02d_phasicmodulation_decoding', subj)];
+  if doparc
+    filename = [filename, '_parc'];
+  end
+  save(filename, 'amp', 'ang', 'amp_rand', 'ang_ran
