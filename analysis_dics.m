@@ -112,6 +112,9 @@ for k=1:numel(dat)
   pow_stim.pow = [pow_stim.pow tmppow_stim{k}.pow];
   pow_bl.pow = [pow_bl.pow tmppow_bl{k}.pow];
 end
+powRatio.mean = nanmean(pow_stim.pow./pow_bl.pow,2);
+powRatio.std = nanstd(pow_stim.pow./pow_bl.pow,[],2);
+
 
 % Compute T statistics
 n = size(pow_stim.pow,2);
@@ -134,4 +137,4 @@ ixR = find(sourcemodel.pos(:,1)>0);
 maxidx(1) = ixL(maxidx(1));
 maxidx(2) = ixR(maxidx(2));
 
-save([projectdir, sprintf('results/freq/sub%02d_dics_gamma', subj)], 'maxidx','Tmax', 'Tval', 'pow_stim', 'pow_bl', 'sourcemodel_ses', 'dicsfilter');
+save([projectdir, sprintf('results/freq/sub%02d_dics_gamma', subj)], 'maxidx','Tmax', 'Tval', 'dicsfilter', 'powRatio');
