@@ -1,11 +1,11 @@
 function analysis_phasic_modulation(subj, varargin)
 
-contrast   = ft_getopt(varargin, 'contrast', 'attended');
-hemis      = ft_getopt(varargin, 'hemis',    [1 2]);
-freqs      = ft_getopt(varargin, 'freqs',    4:1:30);
-npermfiles = ft_getopt(varargin, npermfiles, 10);
-dosave     = ft_getopt(varargin, 'dosave',   true);
-doparc     = ft_getopt(varargin, 'doparc',   false);
+contrast   = ft_getopt(varargin, 'contrast',   'attended');
+hemis      = ft_getopt(varargin, 'hemis',      [1 2]);
+freqs      = ft_getopt(varargin, 'freqs',      4:1:30);
+npermfiles = ft_getopt(varargin, 'npermfiles', 10);
+dosave     = ft_getopt(varargin, 'dosave',     true);
+doparc     = ft_getopt(varargin, 'doparc',     false);
 
 datainfo;
 
@@ -80,4 +80,7 @@ if dosave
   if doparc
     filename = [filename, '_parc'];
   end
-  save(filename, 'amp', 'ang', 'amp_rand', 'ang_ran
+  save(filename, 'amp', 'ang', 'amp_rand', 'ang_rand', 'acc', 'acc_rand');
+end
+
+
