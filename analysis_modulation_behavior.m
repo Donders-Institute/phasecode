@@ -72,14 +72,13 @@ for h=hemis
   end
 end
 
+  rtbin = zeros(nfreq, numel(hemis), size(phi,2), nbins);
+  rtbinshuff = zeros(nfreq, numel(hemis), size(phi,2), nperm, nbins);
 for f=1:nfreq
   f
-  rtbin{f} = zeros(nbins, numel(hemis), size(phi,2));
-  rtbinshuff{f} = zeros(nbins, numel(hemis), size(phi,2), nperm);
   for h=hemis
     tmpphi = phi(trlidx{h},:,f);
-
-    
+ 
     for k=1:nbins
       centerphase = bins(k);
       lim = [centerphase-pi/2 centerphase+pi/2];
@@ -93,12 +92,12 @@ for f=1:nfreq
       if isempty(sel), break
       end
       for ch = 1:size(sel,2)
-        rtbin{f}(k,h,ch) = mean(tmprt{h}(sel(:,ch)));
+        rtbin(f,h,ch,k) = mean(tmprt{h}(sel(:,ch)));
       end
       
       for ii=1:nperm
         for ch = 1:size(sel,2)
-          rtbinshuff{f}(k,h,ch,ii) = mean(rtshuff{h}(sel(:,ch),ii));
+          rtbinshuff(f,h,ch,ii,k) = mean(rtshuff{h}(sel(:,ch),ii));
         end
       end
     end
@@ -118,34 +117,28 @@ switch method
     amprand = zeros(nperm, nfreq, numel(hemis), size(phi,2));
     angrand = zeros(nperm, nfreq, numel(hemis), size(phi,2));
     
-    for f=1:nfreq
-      for h=hemis
-        for ch=1:numel(data.label)
-          dat = rtbin{f}(:,h,ch);
-          s = statfun_cosinefit(cfg, dat', centerphase);
-          amp(f,h,ch) = abs(s.stat);
-          ang(f,h,ch) = angle(s.stat);
-          
-          tmp2 = squeeze(rtbinshuff{f}(:,h,ch,:));
-          for k=1:nperm
-            srand = statfun_cosinefit(cfg, tmp2(:,k)', centerphase);
-            amprand(k, f, h, ch) = abs(srand.stat);
-            angrand(k, f, h, ch) = angle(srand.stat);
-          end
-        end
-      end
-    end
+    [s1, s2, s3, s4] = size(rtbin);
+    dat = reshape(rtbin, [], s4);
+    s = statfun_cosinefit(cfg, dat, centerphase);
+    amp = reshape(abs(s.stat), [s1,s2,s3]);
+    ang = reshape(angle(s.stat), [s1,s2,s3]);
+    
+    [s1, s2, s3, s4, s5] = size(rtbinshuff);
+    dat = reshape(rtbinshuff, [], s5);
+    s = statfun_cosinefit(cfg, dat, centerphase);
+    amprand = reshape(abs(s.stat), [s1,s2,s3,s4]);
+    angrand = reshape(angle(s.stat), [s1,s2,s3,s4]);
     
     y = (amp-squeeze(mean(amprand)))./squeeze(std(amprand));
     
   case 'kldiv'
     % compute kl-divergence (deviation from uniformity)
     uniform = ones(nbins,1)/nbins;
-    for f=1:numel(rtbin)
+    for f=1:nfreq
       for h=hemis
         for ch=1:numel(data.label)
-          dat = rtbin{f}(:,h,ch);
-          tmp2 = squeeze(rtbinshuff{f}(:,h,ch,:));
+          dat = squeeze(rtbin(f,h,ch,:));
+          tmp2 = squeeze(rtbinshuff(f,h,ch,:,:))';
           rtbin_distr = dat/sum(dat);
           kl(f,h,ch) = kldiv([], uniform, rtbin_distr);
           for k=1:nperm
