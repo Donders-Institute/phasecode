@@ -1,4 +1,10 @@
 function analysis_modulation_behavior(subj, varargin)
+% model whether behavior (reaction times) are modulated by the phase of a
+% particular frequency. Use every parcel from a cortical sheet to compute
+% the instantaneous phase at stimulus change. Use the phase to bin reaction
+% times, and fit a cosine to these bins. Also do this after shuffling
+% reaction times (permutation distribution).
+
 
 contrast = ft_getopt(varargin, 'contrast', 'attended');
 method   = ft_getopt(varargin, 'method',   'cosinefit');
@@ -7,6 +13,9 @@ freqs    = ft_getopt(varargin, 'freqs',    4:1:30);
 nbins    = ft_getopt(varargin, 'nbins',    50);
 nperm    = ft_getopt(varargin, 'nperm',    100);
 hemis    = ft_getopt(varargin, 'hemis',    [1 2]);
+doplot   = ft_getopt(varargin, 'doplot',   false);
+dosave   = ft_getopt(varargin, 'dosave',   true);
+
 
 datainfo;
 if strcmp(method, 'kldiv')
@@ -53,14 +62,23 @@ phi=cat(3,phase{:});
 bins = [0:2/nbins:2*(nbins-1)/nbins]*pi;
 nfreq = numel(freqs);
 
+% make random distributions of RTs
+for h=hemis
+  trlidx{h} = find(data.trialinfo(:,1)==h);
+  tmprt{h} = rt(trlidx{h});
+  rtshuff{h} = zeros(numel(tmprt{h}), nperm);
+  for k=1:nperm
+    rtshuff{h}(:,k) = tmprt{h}(randperm(numel(tmprt{h})));
+  end
+end
+
 for f=1:nfreq
   f
   rtbin{f} = zeros(nbins, numel(hemis), size(phi,2));
   rtbinshuff{f} = zeros(nbins, numel(hemis), size(phi,2), nperm);
-  for hemi=hemis
-    trlidx = find(data.trialinfo(:,1)==hemi);
-    tmpphi = phi(trlidx,:,f);
-    tmprt = rt(trlidx);
+  for h=hemis
+    tmpphi = phi(trlidx{h},:,f);
+
     
     for k=1:nbins
       centerphase = bins(k);
@@ -75,16 +93,14 @@ for f=1:nfreq
       if isempty(sel), break
       end
       for ch = 1:size(sel,2)
-        rtbin{f}(k,hemi,ch) = mean(tmprt(sel(:,ch)));
+        rtbin{f}(k,h,ch) = mean(tmprt{h}(sel(:,ch)));
       end
       
       for ii=1:nperm
-        rtshuff = tmprt(randperm(numel(tmprt)));
         for ch = 1:size(sel,2)
-          rtbinshuff{f}(k,hemi,ch,ii) = mean(rtshuff(sel(:,ch)));
+          rtbinshuff{f}(k,h,ch,ii) = mean(rtshuff{h}(sel(:,ch),ii));
         end
       end
-      
     end
   end
 end
@@ -177,6 +193,6 @@ if doplot
 end
 
 if dosave
-  filename = sprintf('sub%02d_cosinefit_behavior_parc.mat', subj);
+  filename = [projectdir, 'results/modulation/', sprintf('sub%02d_cosinefit_behavior_parc.mat', subj)];
   save(filename, 'stat', 'ang','amp', 'amprand', 'angrand','phase')
 end
