@@ -129,7 +129,7 @@ switch method
     amprand = reshape(abs(s.stat), [s1,s2,s3,s4]);
     angrand = reshape(angle(s.stat), [s1,s2,s3,s4]);
     
-    y = (amp-squeeze(mean(amprand)))./squeeze(std(amprand));
+    y = (amp-squeeze(mean(amprand,4)))./squeeze(std(amprand,[],4));
     
   case 'kldiv'
     % compute kl-divergence (deviation from uniformity)
