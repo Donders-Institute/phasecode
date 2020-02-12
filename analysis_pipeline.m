@@ -46,6 +46,62 @@ for f=freqs
   end
 end
 
+%%%%%%%%%%%%%%%%%%%%%%
+%%% Basic decoding %%%
+%%%%%%%%%%%%%%%%%%%%%%
+% show that basic decoding based of stimulus orientation is possible.
+% frequency is irrelevant here.
+contrasts = {'attended', 'unattended'};
+rng('shuffle') % initiate seed with time stamp
+for c = 1:numel(contrasts)
+  for hemi = hemis % attend left (1) and attend right (2) trials
+    rngseed = rand(1)*10^6;
+    for do_randphasebin=[0 1]
+      if do_qsubfeval
+        qsubfeval(@analysis_decoding, subj,contrasts{c},'hemi', hemi,...
+          'do_correcttrials', 1, 'do_avgtrials', 1, 'rngseed', rngseed,...
+          'do_prewhiten', 2, 'f', 4,'nbins', 1, 'groupsize', 5,'nperm', 100,...
+          'do_randphasebin', do_randphasebin, 'memreq', 6*1024^3, 'timreq', 3600);
+      else
+        analysis_decoding(subj,contrasts{c},'hemi', hemi,...
+          'do_correcttrials', 1, 'do_avgtrials', 1, 'rngseed', rngseed,...
+          'do_prewhiten', 2, 'f', 4,'nbins', 1, 'groupsize', 5,'nperm', 100,...
+          'do_randphasebin', do_randphasebin);
+      end
+    end
+  end
+end
+
+% now do group analysis: analysis_decoding_group
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Control analysis: decoding on eye tracker data %%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% without binning, frequency is irrelevant
+contrasts = {'attended', 'unattended'};
+nbins_eye = 1;
+rng('shuffle')
+rngseed = rand(1)*10^6;
+for c = 1:numel(contrasts)
+  for do_randphasebin=[0 1]
+    for hemi=hemis
+      if do_qsubfeval
+        qsubfeval(@analysis_decoding, subj,constrasts{c},'hemi', hemi,...
+          'do_correcttrials', 1, 'do_avgtrials', 1, 'rngseed', rngseed,...
+          'do_prewhiten', 2, 'f', 4,'nbins', nbins_eye, 'groupsize', 5, 'chansel', 'eye',...
+          'do_randphasebin',do_randphasebin, 'randnr', [], 'nrandperm',1, 'nperm', 100, 'timreq', 3600, ...
+          'memreq', 6*1024^3);
+      else
+        analysis_decoding(subj,constrasts{c},'hemi', hemi,...
+          'do_correcttrials', 1, 'do_avgtrials', 1, 'rngseed', rngseed,...
+          'do_prewhiten', 2, 'f', 4,'nbins', nbins_eye, 'groupsize', 5, 'chansel', 'eye',...
+          'do_randphasebin',do_randphasebin, 'randnr', [], 'nrandperm',1, 'nperm', 100);
+      end
+    end
+  end
+end
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% phasic modulation in decoding %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -88,8 +144,7 @@ for c = 1:numel(contrasts)
   end
 end
 
-% test phasic modulation of decoding performance
-% FIXME: needs adjustment for statistics
+% model phasic modulation of decoding performance
 if do_qsubfeval
   qsubfeval(analysis_phasic_modulation, subj, 'timreq', 3600, 'memreq', 10*1024^3);
 else
@@ -97,44 +152,7 @@ else
 end
 % now do group analysis: analysis_phasic_modulation_group
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% Control analysis: decoding on eye tracker data %%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% FIXME: with our without binning? If with, based on which freq?
-f=10;
-nbins_eye = 1;
-% observed data
-rng('shuffle')
-rngseed = rand(1)*10^6;
-if do_qsubfeval
-  qsubfeval(@analysis_decoding, subj,'attended','hemi', hemi,...
-    'do_correcttrials', 1, 'do_avgtrials', 1, 'rngseed', rngseed,...
-    'do_prewhiten', 2, 'f', f,'nbins', nbins_eye, 'groupsize', 5, 'chansel', 'eye',...
-    'do_randphasebin',0, 'randnr', [], 'nrandperm',1, 'nperm', 20, 'timreq', 900, ...
-    'memreq', 8*1024^3);
-else
-  analysis_decoding(subj,'attended','hemi', hemi,...
-    'do_correcttrials', 1, 'do_avgtrials', 1, 'rngseed', rngseed,...
-    'do_prewhiten', 2, 'f', f,'nbins', nbins_eye, 'groupsize', 5, 'chansel', 'eye',...
-    'do_randphasebin',0, 'randnr', [], 'nrandperm',1, 'nperm', 20);
-end
 
-% randomized data
-for k=1:100
-  rngseed = rand(1)*10^6;
-  if do_qsubfeval
-    qsubfeval(@analysis_decoding, subj,'attended','hemi', hemi,...
-      'do_correcttrials', 1, 'do_avgtrials', 1, 'rngseed', rngseed,...
-      'do_prewhiten', 2, 'f', f,'nbins', nbins_eye, 'groupsize', 5, 'chansel', 'eye',...
-      'do_randphasebin',1, 'randnr', k, 'nrandperm',1, 'nperm', 20,'timreq', 900, ...
-      'memreq', 8*1024^3);
-  else
-    analysis_decoding(subj,'attended','hemi', hemi,...
-      'do_correcttrials', 1, 'do_avgtrials', 1, 'rngseed', rngseed,...
-      'do_prewhiten', 2, 'f', f,'nbins', nbins_eye, 'groupsize', 5, 'chansel', 'eye',...
-      'do_randphasebin',1, 'randnr', k, 'nrandperm',1, 'nperm', 20);
-  end
-end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% phasic modulation of reaction times in 2D space %%%
@@ -148,7 +166,7 @@ end
 
 if do_qsubfeval
   qsubfeval(@analysis_modulation_behavior, subj, 'model', '2d', 'method','cosinefit',...
-    'freqs', freqs, 'timreq', 4*1024^3, 'memreq', 12*1024^3);
+    'freqs', freqs, 'timreq', 4*3600, 'memreq', 12*1024^3);
 else
   analysis_modulation_behavior(subj, 'model', '2d', 'method','cosinefit', 'freqs', freqs);
 end
@@ -163,10 +181,17 @@ end
 load atlas_subparc374_8k.mat
 exclude_label = match_str(atlas.parcellationlabel, {'L_???_01', 'L_MEDIAL.WALL_01', 'R_???_01', 'R_MEDIAL.WALL_01'});
 selparc = setdiff(1:numel(atlas.parcellationlabel),exclude_label); % hard coded exclusion of midline and ???
-whichparc = match_str(useparc, selparc);
+useparc = {'_5_B05_01', '_7_B05_01', '_7_B05_04', '_7_B05_05', '_7_B05_08', '_7_B05_09', '_7_B05_10', '_7_B05_11', '_7_B05_12',...
+ '_19_B05_13', '_8_B05_03','_8_B05_06', '_9_B05_01', '_9_B05_02'}; % IPS and FEF
+for k=1:numel(useparc)
+  whichparc{k} = find(contains(atlas.parcellationlabel(selparc), useparc{k}));
+end
+whichparc = unique(cat(1,whichparc{:}));
+
 rng('shuffle')
 rngseed = rand(1)*10^6;
 % observed data
+for hemis=[1 2]
 if do_qsubfeval
   qsubfeval(@analysis_decoding, subj,'attended','hemi', hemi,...
     'do_correcttrials', 1, 'do_avgtrials', 1, 'rngseed', rngseed,...
@@ -177,6 +202,7 @@ else
     'do_correcttrials', 1, 'do_avgtrials', 1, 'rngseed', rngseed,...
     'do_prewhiten', 2, 'f', f,'nbins', 18, 'groupsize', 5,'doparc', 1, 'whichparc',whichparc,...
     'randnr', [],'do_randphasebin',0, 'nrandperm',1, 'nperm', 20,
+end
 end
 
 %random data
@@ -202,6 +228,8 @@ else
 end
 
 %% Group analysis
+% test whether we can decode the orientation of attended/unattended stimuli
+analysis_decoding_group
 
 % test phasic modulation of decoding performance
 % FIXME: needs adjustment for statistics
