@@ -14,9 +14,9 @@ filename = [filename, sprintf('sub%02d/', subj)];
 
 if doparc
   filename = [filename, 'parc/'];
-elseif strcmp(chansel_orig, 'eye/')
-  filename = [filename, 'eye'];
-elseif exist('primal_P','var') && do_randphasebin
+elseif strcmp(chansel_orig, 'eye')
+  filename = [filename, 'eye/'];
+elseif 0% exist('primal_P','var') && do_randphasebin
   filename = [filename, 'primalp/'];
 end
 
@@ -33,7 +33,9 @@ if strcmp(contrast, 'attended') || strcmp(contrast, 'unattended')
   filename = [filename, sprintf('_hemi%d', hemi)];
 end
 
-filename = [filename, sprintf('_f%d', f)];
+if nbins>1
+  filename = [filename, sprintf('_f%d', f)];
+end
 
 if doparc
   filename = [filename, sprintf('_%d', whichparc)];
@@ -44,12 +46,12 @@ if exist('randnr', 'var') && ~isempty(randnr)
 end
 
 % save variables
-settings = struct('avgtrials', do_avgtrials, 'correcttrials', do_correcttrials, 'contrast', contrast,'prewhiten', do_prewhiten>0, 'var', vararg, 'nperm',nperm, 'nrandperm', nrandperm);
+settings = struct('correcttrials', do_correcttrials, 'contrast', contrast,'prewhiten', do_prewhiten>0, 'var', vararg, 'nperm',nperm, 'nrandperm', nrandperm);
 if ~exist('primal', 'var') || do_randphasebin, primal=[];P=[]; end
 rnumb=rng;
 if dosave
   if isempty(tmpfilename)
-    save(filename, 'accuracy','settings', 'primal', 'primal_P', 'rnumb')
+    save(filename, 'accuracy','settings', 'primal_P', 'rnumb')
   else
     save(tmpfilename, 'accuracy', 'rnumb')
   end
