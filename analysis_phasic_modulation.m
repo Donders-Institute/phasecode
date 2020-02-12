@@ -4,6 +4,7 @@ contrast   = ft_getopt(varargin, 'contrast',   'attended');
 hemis      = ft_getopt(varargin, 'hemis',      [1 2]);
 freqs      = ft_getopt(varargin, 'freqs',      4:1:30);
 npermfiles = ft_getopt(varargin, 'npermfiles', 10);
+dorand     = ft_getopt(varargin, 'dorand',     true);
 dosave     = ft_getopt(varargin, 'dosave',     true);
 doparc     = ft_getopt(varargin, 'doparc',     false);
 whichparc  = ft_getopt(varargin, 'whichparc',  []);
@@ -36,12 +37,15 @@ for h=hemis
     tmp{cnt} = mean(mean(tmp{cnt}.accuracy,3),1);
     
     % now do the same for random phase bins
+    if dorand
       for k=1:npermfiles
         tmp2{cnt,k} = load([filedir, sprintf('sub%02d_decoding_rand_%sf%d_%d%d', subj, hemi, f,k)]);
         tmp2{cnt,k} = mean(mean(tmp2{cnt,k}.accuracy,4),2);
       end
+    end
     cnt=cnt+1;
   end
+  if dorand
   if size(tmp2,2)>1
     for k=1:numel(freqs)
       dum = tmp2(k,:);
@@ -53,8 +57,10 @@ for h=hemis
     end
   end
   % restructuring decoding accuracies
-  acc(hcnt,:,:) = cat(1,tmp{:})';
   acc_rand(hcnt,:,:,:) = cat(3,tmp2b{:});
+  end
+  acc(hcnt,:,:) = cat(1,tmp{:})';
+  
   hcnt=hcnt+1;
 end
 clear tmp*
@@ -72,10 +78,16 @@ for h=1:hcnt-1
   ang(h,:) = angle(s.stat);
   
   % surrogate data
+  if dorand
   tmp = reshape(permute(acc_rand, [1 3 4 2]), hcnt-1, length(centerphase), []);
   s = statfun_cosinefit(cfg, squeeze(tmp(h,:,:))', centerphase);
   amp_rand(h,:,:) = reshape(abs(s.stat), numel(freqs),[]);
   ang_rand(h,:,:) = reshape(angle(s.stat), numel(freqs),[]);
+  else
+    amp_rand=[];
+    ang_rand=[];
+    acc_rand=[];
+  end
 end
 
 if dosave
