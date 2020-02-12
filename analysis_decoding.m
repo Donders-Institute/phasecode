@@ -11,7 +11,7 @@ f                   = ft_getopt(varargin, 'f',                   10);
 do_randphasebin     = ft_getopt(varargin, 'do_randphasebin',     false);
 nfolds              = ft_getopt(varargin, 'nfolds',              5);
 nperm               = ft_getopt(varargin, 'nperm',               10);
-nrandperm           = ft_getopt(varargin, 'nrandperm',           100);
+nrandperm           = ft_getopt(varargin, 'nrandperm',           1);
 nbins               = ft_getopt(varargin, 'nbins',               12);
 groupsize           = ft_getopt(varargin, 'groupsize',           10);
 binoverlap          = ft_getopt(varargin, 'binoverlap',          false);
@@ -271,7 +271,7 @@ for irandperm = 1:nrandperm
         indx_testtrials = sum(groupsize_fold(1,1:ifold))-groupsize_fold(ifold)+1:sum(groupsize_fold(1,1:ifold));
         [traindata, testdata, traindesign, testdesign, tmpP] = dml_preparedata(bindat(bin,:), indx_testtrials, 1, do_prewhiten);
         if ~isempty(tmpP), tmpP=tmpP; end
-        if do_randphasebin && strcmp(chansel_orig,'eye')
+        if do_randphasebin && (strcmp(chansel_orig,'eye') || nbins==1)
           traindesign = traindesign(randperm(numel(traindesign)));
         end
         % initialize model
@@ -306,6 +306,7 @@ for irandperm = 1:nrandperm
     end
   end
   primal_P{irandperm} = permute(tmpprimal_P,[4 1 2 3]);
+  primal_P{irandperm} = squeeze(mean(mean(primal_P{irandperm},4),2));
 end
   
 end
@@ -321,6 +322,7 @@ if ~do_randphasebin && do_prewhiten==2
     end
   end
   primal_P = permute(primal_P,[4 1 2 3]);
+  primal_P = squeeze(mean(mean(primal_P,4),2));
 else
   if exist('primal_P','var')
     % do nothing
