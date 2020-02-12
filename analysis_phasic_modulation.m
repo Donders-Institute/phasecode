@@ -6,6 +6,7 @@ freqs      = ft_getopt(varargin, 'freqs',      4:1:30);
 npermfiles = ft_getopt(varargin, 'npermfiles', 10);
 dosave     = ft_getopt(varargin, 'dosave',     true);
 doparc     = ft_getopt(varargin, 'doparc',     false);
+whichparc  = ft_getopt(varargin, 'whichparc',  []);
 
 datainfo;
 
@@ -28,6 +29,9 @@ for h=hemis
       filedir = [filedir, 'parc/'];
     end
     filename = [filedir, sprintf('sub%02d_decoding_%sf%d', subj, hemi, f)];
+    if ~isempty(whichparc)
+      filename = [filename, sprintf('_%d', whichparc)];
+    end
     tmp{cnt} = load(filename);
     tmp{cnt} = mean(mean(tmp{cnt}.accuracy,3),1);
     
@@ -79,6 +83,9 @@ if dosave
   filename = [filedir, sprintf('sub%02d_phasicmodulation_decoding', subj)];
   if doparc
     filename = [filename, '_parc'];
+    if ~isempty(whichparc)
+      filename = [filename, sprintf('_%d', whichparc)];
+    end
   end
   save(filename, 'amp', 'ang', 'amp_rand', 'ang_rand', 'acc', 'acc_rand');
 end
