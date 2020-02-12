@@ -3,9 +3,10 @@
 
 datainfo;
 contrasts = {'attended', 'unattended'};
-filedir = [projectdir 'results/collapsephasebin/'];
+filedir_orig = [projectdir 'results/collapsephasebin/'];
 hemis = [1 2];
 nperm=100;
+if ~exist('doeye','var'), doeye=false; end
 
 
 acc = rand(numel(contrasts), numel(hemis), numel(valid_subjects), nperm);
@@ -14,11 +15,15 @@ accrand = rand(numel(contrasts), numel(hemis), numel(valid_subjects), nperm);
 for c=1:numel(contrasts)
   for h=hemis
     for subj=valid_subjects
-      filename = fullfile([filedir, contrasts{c},'/', sprintf('sub%02d/sub%02d_decoding_hemi%d.mat', subj, subj, h)]);
+      filedir = fullfile([filedir_orig, contrasts{c},'/', sprintf('sub%02d/', subj)]);
+      if doeye
+        filedir = [filedir ,'eye/'];
+      end
+      filename = [filedir, sprintf('sub%02d_decoding_hemi%d.mat', subj, h)];
       tmp = load(filename);
       acc(c,h,subj,:) = mean(tmp.accuracy,2); % mean accuracy over permutations
       
-      filename = fullfile([filedir, contrasts{c},'/', sprintf('sub%02d/sub%02d_decoding_rand_hemi%d.mat', subj, subj, h)]);
+      filename = [filedir, sprintf('sub%02d_decoding_rand_hemi%d.mat', subj, h)];
       tmp = load(filename);
       accrand(c,h,subj,:) = mean(tmp.accuracy,2);
     end
@@ -46,10 +51,16 @@ for c=1:numel(contrasts)
     datrand(c,h).trial = squeeze(mean(accrand(c,h,:,:),4));
     
     stat(c,h) = ft_timelockstatistics(cfgs, dat(c,h), datrand(c,h));
+    accuracy(c,h).mean = mean(dat(c,h).trial);
+    accuracy(c,h).std = std(dat(c,h).trial);
   end
 end
 
-save([projectdir, 'stat_decoding.m'])
+filename = [projectdir, 'stat_decoding']; 
+if doeye
+  filename = [filename, '_eye'];
+end
+save(filename, 'stat', 'accuracy')
 
 
 
