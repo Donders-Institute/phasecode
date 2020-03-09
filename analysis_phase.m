@@ -14,6 +14,7 @@ end
 if ~exist('dosave','var') || nargin<6 || isempty(dosave)
   dosave = true;
 end
+taper = ft_getopt(varargin, 'taper', 'hanning');
 
 addpath('/project/3011085.02/phasecode/scripts/CircStat/');
 datainfo;
@@ -38,7 +39,12 @@ for h=1:numel(dat)
   % mtmconvol
   cfg=[];
   cfg.method = 'mtmconvol';
-  cfg.taper = 'hanning';
+  if strcmp(taper, 'dpss')
+    cfg.taper = 'dpss';
+    cfg.tapsmofrq = 4;
+  else
+    cfg.taper = 'hanning';
+  end
   cfg.foi = f;
   cfg.pad = 4;
   cfg.output = 'fourier';
