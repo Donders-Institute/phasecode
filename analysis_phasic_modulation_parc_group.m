@@ -13,6 +13,14 @@ switch whichdata
     freqs = 4:1:30;
   case 'neural'
     freqs = 4:1:20;
+      useparc = {'_7_B05_08','_7_B05_04','_7_B05_09','_7_B05_10','_7_B05_11',...
+    '_7_B05_12','_7_B05_13', '_19_B05_12', '_19_B05_09', '_8_B05_06', ...
+    '_7_B05_01','_7_B05_02','_7_B05_05','_7_B05_09', '_8_B05_06', ...
+    '_5_B05_02', '_5_B05_01', '_2_B05_08'};
+  for k=1:numel(useparc)
+    whichparc{k} = find(contains(atlas.parcellationlabel(selparc), useparc{k}));
+  end
+  whichparc = unique(cat(1,whichparc{:}));
 end
 hemis = [1 2];
 nperm = 100;
@@ -35,14 +43,14 @@ for subj=1:n
         ang{h}(selparc, :, subj) = squeeze(tmp.ang(:,h,:))';      
         ampr{h}(selparc, :, subj,:) = permute(squeeze(tmp.amprand(:,h,:,:)),[2 1 3]);
       end
-    case 'neural'
-      for h=hemis
+    case 'neural' 
       for w=1:numel(whichparc)
-        tmp = load([d, sprintf('sub%02d_phasicmodulation_decoding_parc_%d', subj, whichparc(w))], 'amp', 'amp_rand', 'ang');
-        amp{h}(selparc(whichparc(w)), :,subj) = tmp.amp(h,:);
-        ampr{h}(selparc(whichparc(w)), :,subj, :) = squeeze(tmp.amp_rand(h,:,:));
-        ang{h}(selparc(whichparc(w)), :,subj) = tmp.ang(h,:);
-      end
+        tmp = load([projectdir,'results/modulation/', sprintf('sub%02d_phasicmodulation_decoding_parc_%d', subj, whichparc(w))], 'amp', 'amp_rand', 'ang');
+        for h=hemis
+          amp{h}(selparc(whichparc(w)), :,subj) = tmp.amp(h,:);
+          ampr{h}(selparc(whichparc(w)), :,subj, :) = squeeze(tmp.amp_rand(h,:,:));
+          ang{h}(selparc(whichparc(w)), :,subj) = tmp.ang(h,:);
+        end
       end
   end
 end
@@ -59,8 +67,12 @@ cfg.clusteralpha = 0.05;
 cfg.alpha = 0.05;
 cfg.clusterstatistic = 'maxsum';
 cfg.clusterthreshold = 'nonparametric_individual';
-cfg.connectivity = full(parcellation2connectivity_midline(atlas));
-
+switch whichdata
+  case 'behavior'
+    cfg.connectivity = full(parcellation2connectivity_midline(atlas));
+  case 'neural'
+    cfg.connectivity = eye(374);
+end
 
 for h=hemis
   [s1 s2 s3 s4] = size(ampr{h});
@@ -73,13 +85,19 @@ for h=hemis
   stat{h}.dimord = 'chan_time';
   stat{h}.label = atlas.parcellationlabel;
   stat{h}.brainordinate = atlas;
+  stat{h}.std = std(amp{h},[],3);
+  stat{h}.randstd = mean(std(ampr{h}, [], 4),3);
+  stat{h}.randmean = mean(mean(ampr{h},4),3);
+end
+for h=1:2
+    ampr{h} = nanmean(ampr{h},4);
 end
 
 switch whichdata
   case 'behavior'
     filename = [projectdir, 'results/stat_phasicmodulation_behavior'];
-    save(filename, 'stat')
+    save(filename, 'stat', 'amp', 'ang','ampr')
   case 'neural'
     filename = [projectdir, 'results/stat_phasicmodulation_decoding_parc'];
-    save(filename, 'stat', 'amp', 'ang')
+    save(filename, 'stat', 'amp', 'ang','ampr')
 end
