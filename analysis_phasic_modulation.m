@@ -39,7 +39,11 @@ for h=hemis
     % now do the same for random phase bins
     if dorand
       for k=1:npermfiles
-        tmp2{cnt,k} = load([filedir, sprintf('sub%02d_decoding_rand_%sf%d_%d%d', subj, hemi, f,k)]);
+        if ~isempty(whichparc)
+          tmp2{cnt,k} = load([filedir, sprintf('sub%02d_decoding_rand_%sf%d_%d_%d', subj, hemi, f,whichparc, k)]);
+        else
+          tmp2{cnt,k} = load([filedir, sprintf('sub%02d_decoding_rand_%sf%d_%d', subj, hemi, f, k)]);
+        end
         tmp2{cnt,k} = mean(mean(tmp2{cnt,k}.accuracy,4),2);
       end
     end
