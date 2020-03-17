@@ -22,6 +22,11 @@ hemis = [1 2];
 %%% basic analyses %%%
 %%%%%%%%%%%%%%%%%%%%%%
 
+
+% Time-frequency analysis
+
+
+
 % virtual channel based on maximal induced gamma power
 analysis_peakfreq(subj);
 
@@ -174,60 +179,98 @@ end
 % comes out, use that/those parcels in which there is an effect, to
 % estimate phase. Then do the following.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% phasic modulation in decoding based on parcel phase %%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% phasic modulation in decoding based FEF/IPS phase %%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Use parcels of IPS and FEF
 
 load atlas_subparc374_8k.mat
 exclude_label = match_str(atlas.parcellationlabel, {'L_???_01', 'L_MEDIAL.WALL_01', 'R_???_01', 'R_MEDIAL.WALL_01'});
 selparc = setdiff(1:numel(atlas.parcellationlabel),exclude_label); % hard coded exclusion of midline and ???
-useparc = {'_5_B05_01', '_7_B05_01', '_7_B05_04', '_7_B05_05', '_7_B05_08', '_7_B05_09', '_7_B05_10', '_7_B05_11', '_7_B05_12',...
- '_19_B05_13', '_8_B05_03','_8_B05_06', '_9_B05_01', '_9_B05_02'}; % IPS and FEF
+% useparc = {'_7_B05_08','_7_B05_04','_7_B05_09','_7_B05_10','_7_B05_11','_7_B05_12','_7_B05_13', '_19_B05_12', '_19_B05_09', '_8_B05_06'};
+% useparc = {'_7_B05_01','_7_B05_02','_7_B05_05','_7_B05_09', '_8_B05_06', '_5_B05_02', '_5_B05_01', '_2_B05_08'};
+useparc = {'_7_B05_08','_7_B05_04','_7_B05_09','_7_B05_10','_7_B05_11',...
+  '_7_B05_12','_7_B05_13', '_19_B05_12', '_19_B05_09', '_8_B05_06', ...
+  '_7_B05_01','_7_B05_02','_7_B05_05','_7_B05_09', '_8_B05_06', ...
+  '_5_B05_02', '_5_B05_01', '_2_B05_08'};
 for k=1:numel(useparc)
   whichparc{k} = find(contains(atlas.parcellationlabel(selparc), useparc{k}));
 end
 whichparc = unique(cat(1,whichparc{:}));
 
-rng('shuffle')
-rngseed = rand(1)*10^6;
-% observed data
-for hemis=[1 2]
-if do_qsubfeval
-  qsubfeval(@analysis_decoding, subj,'attended','hemi', hemi,...
-    'do_correcttrials', 1, 'do_avgtrials', 1, 'rngseed', rngseed,...
-    'do_prewhiten', 2, 'f', f,'nbins', 18, 'groupsize', 5,'doparc', 1, 'whichparc',whichparc,...
-    'randnr', [],'do_randphasebin',0, 'nrandperm',1, 'nperm', 20, 'memreq', 8*1024^3, 'timreq', 2*3600);
-else
-  analysis_decoding, subj,'attended','hemi', hemi,...
-    'do_correcttrials', 1, 'do_avgtrials', 1, 'rngseed', rngseed,...
-    'do_prewhiten', 2, 'f', f,'nbins', 18, 'groupsize', 5,'doparc', 1, 'whichparc',whichparc,...
-    'randnr', [],'do_randphasebin',0, 'nrandperm',1, 'nperm', 20,
-end
-end
-
-%random data
-for k=1:10
-  rngseed = rand(1)*10^6;
-  if do_qsubfeval
-    qsubfeval(@analysis_decoding, subj,'attended','hemi', hemi,...
-      'do_correcttrials', 1, 'do_avgtrials', 1, 'rngseed', rngseed,...
-      'do_prewhiten', 2, 'f', f,'nbins', 18, 'groupsize', 5,'doparc', 1, 'whichparc',whichparc,...
-      'randnr', k,'do_randphasebin',1, 'nrandperm',1, 'nperm', 20, 'memreq', 8*1024^3, 'timreq', 2*3600);
-  else
-    analysis_decoding, subj,'attended','hemi', hemi,...
-      'do_correcttrials', 1, 'do_avgtrials', 1, 'rngseed', rngseed,...
-      'do_prewhiten', 2, 'f', f,'nbins', 18, 'groupsize', 5,'doparc', 1, 'whichparc',whichparc,...
-      'randnr', k,'do_randphasebin',1, 'nrandperm',1, 'nperm', 20,
+%%%%%%%%%%%%
+% observed %
+%%%%%%%%%%%%
+for subj=valid_subjects
+  for w=1:numel(whichparc)
+    for f=4:20
+      for hemi=[1 2]
+        qsubfeval(@analysis_decoding, subj,'attended','hemi', hemi,...
+          'do_correcttrials', 1, 'do_avgtrials', 1, 'rngseed', [],...
+          'do_prewhiten', 2, 'f', f,'nbins', 18, 'groupsize', 5,'doparc', 1, 'whichparc',whichparc(w),...
+          'randnr', [],'do_randphasebin',0, 'nrandperm',1, 'nperm', 20, 'memreq', 8*1024^3, 'timreq', 2*3600);
+      end
+    end
   end
 end
 
-if do_qsubfeval
-  qsubfeval(analysis_phasic_modulation, subj, 'doparc', true, 'timreq', 3600, 'memreq', 10*1024^3);
-else
-  analysis_phasic_modulation(subj)
+%%%%%%%%%%%%%%%%%%%%%%%
+% random permutations %
+%%%%%%%%%%%%%%%%%%%%%%%
+rng('shuffle')
+for k=1:10
+  mkdir tmp, cd tmp
+  for w=1:numel(whichparc)
+    for f=4:20
+      rngseed = rand(1)*10^6;
+      qsubfeval(@qsub_all, whichparc(w),[1 2], k, f, rngseed, 'timreq', 23*3600, 'memreq', 8*1024^3);
+    end
+  end
+end
+
+% if some jobs crashed:
+H=[];
+for k=1:10
+  for w=1:numel(whichparc)
+    for f=4:20
+      for subj=valid_subjects
+        for hemi=1:2
+          if ~exist(sprintf('/project/3011085.06/results/collapsephasebin/attended/sub%02d/parc/sub%02d_decoding_rand_hemi%d_f%d_%d_%d.mat', subj, subj, hemi,f, whichparc(w), k))
+            H=[H; subj,hemi, f, whichparc(w), k];
+          end
+        end
+      end
+    end
+  end
+end
+
+cnt=1;
+for k=1:ceil(size(H,1)./20)
+  try
+    qsubfeval(@qsub_tmp, H(cnt:cnt+19,:) , 'timreq', 20*3600, 'memreq', 10*1024^3);
+  catch
+    qsubfeval(@qsub_tmp, H(cnt:end,:) , 'timreq', 6*3600, 'memreq', 10*1024^3);
+  end
+  cnt=cnt+20;
+end
+
+%%%%%%%%%%%%%%%%%%%%%
+% phasic modulation %
+%%%%%%%%%%%%%%%%%%%%%
+for subj=valid_subjects
+  for w=1:numel(whichparc)
+    if do_qsubfeval
+      qsubfeval(@analysis_phasic_modulation, subj, 'freqs', [4:20], 'dorand', true, 'doparc', true, 'whichparc', whichparc(w), 'hemis', [1 2], 'timreq', 1800,'memreq', 5*1024^3);
+    else
+      analysis_phasic_modulation(subj, 'freqs', [4:20], 'dorand', true, 'doparc', true, 'whichparc', whichparc(w), 'hemis', [1 2]);
+    end
+  end
 end
 
 %% Group analysis
+% TFR on the group level
+analysis_timfreq_group
+
 % test whether we can decode the orientation of attended/unattended stimuli
 analysis_decoding_group
 
@@ -235,9 +278,11 @@ analysis_decoding_group
 % FIXME: needs adjustment for statistics
 analysis_phasic_modulation_group
 
-analysis_modulation_behavior_group
+whichdata = 'behavior';
+analysis_phasic_modulation_parc_group
 
-analysis_phasic_modulation_group('doparc', true)
+whichdata = 'neural';
+analysis_phasic_modulation_parc_group
 
 %% plotting results
 
