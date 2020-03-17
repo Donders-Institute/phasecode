@@ -53,10 +53,11 @@ for c=1:numel(contrasts)
     stat(c,h) = ft_timelockstatistics(cfgs, dat(c,h), datrand(c,h));
     accuracy(c,h).mean = mean(dat(c,h).trial);
     accuracy(c,h).std = std(dat(c,h).trial);
+    accuracy(c,h).all = dat(c,h).trial;
   end
 end
 
-filename = [projectdir, 'stat_decoding']; 
+filename = [projectdir, 'results/stat_decoding']; 
 if doeye
   filename = [filename, '_eye'];
 end
