@@ -4,8 +4,9 @@ valid_subjects=1:10;
 % subjects(1).dataset = '/home/electromag/matves/Data/phasecode/meg_raw/pilot/matspilot1_1200hz_20150330_01.ds';
 % subjects(1).trialfun = 'mytrialfun_pilot';
 projectdir = '/project/3011085.06/';
-% datadir = [projectdir, 'data/'];
 datadir = [projectdir, 'data/'];
+figures_dir = [projectdir, 'manuscript/figures/'];
+results_dir = [projectdir, 'results/'];
 %% experiment
 % 1
 subjects(1).sessions = [1,2,3];
