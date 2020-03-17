@@ -48,7 +48,8 @@ cfgp.channel = chans;
 figure; ft_singleplotTFR(cfgp, H);
 saveas(gcf, [figures_dir, 'TFR_high.svg'])
 
-cfgp=rmfield(cfgp, 'channel');
+
+cfgp=removefields(cfgp, 'channel');
 cfgp.layout = 'CTF275_helmet.mat';
 cfgp.zlim = [0 0.25];
 cfgp.xlim = [0.4 1];
@@ -68,38 +69,40 @@ cfg=[];
 cfg.avgoverfreq = 'yes';
 cfg.avgovertime = 'yes';
 cfg.avgoverchan = 'yes';
-cfg.latency = [0.4 1];
-cfg.frequency = [50 65];
+cfg.latency = [0.2 1];
+cfg.frequency = [45 65];
 cfg.channel = chans;
 H_avg = ft_selectdata(cfg, H);
 
 sprintf('mean gamma power increase %d percent, STD %d percent', H_avg.powspctrm*100, H_avg.std*100)
 
 %% source location gamma virtual channel
-load atlas_subparc374_8k.mat
-increase = [];
+% get average power increase
+increase=[];
 for subj=1:10
-tmp = load([projectdir, sprintf('results/freq/sub%02d_dics_gamma', subj)], 'maxidx', 'powRatio');
-loc(subj,:) = tmp.maxidx;
-pow(subj,:) = tmp.powRatio.mean-1;
-increase = [increase; 100*pow(subj,tmp.maxidx)];
+  tmp = load([projectdir, sprintf('results/freq/sub%02d_dics_gamma', subj)], 'maxidx', 'powRatio');
+  pow(subj,:) = tmp.powRatio.mean-1;
+  increase = [increase; 100*pow(subj,tmp.maxidx)];
 end
-sprintf('gamma power increase, mean left %d (SD %d percent)| right %d percent (SD %d percent)', round(mean(increase(:,1))), round(std(increase(:,1))), round(mean(increase(:,2))), round(std(increase(:,2))))
-
 load standard_sourcemodel3d6mm.mat
-load cortex_inflated_shifted.mat
 P = sourcemodel;
-P = shift_geometry(P);
-% P.pos=ctx.pos;
 P.avg = 100*nanmean(pow)';
 
-virtualchanpos=[];
-virtualchanpos.chanpos = P.pos(loc,:);
-virtualchanpos.elecpos = P.pos(loc,:);
-for k=1:20
-  virtualchanpos.label{k}   = sprintf('%d', k);
+% interpolate source onto cortical sheet
+m1 = load('surface_white_both.mat');
+m2 = load('surface_white_both_shifted');
+cfg=[];
+cfg.parameter = {'avg'};
+sint=ft_sourceinterpolate(cfg, P, m1.mesh);
+sint.hemisphere = m2.mesh.hemisphere;
+loc=[];
+for subj=1:10
+tmp = load([projectdir, sprintf('results/freq/sub%02d_dics_gamma', subj)], 'Tval');
+tmp.Tval.pos = sourcemodel.pos;
+loc(subj,:) = find_interpolated_location(tmp.Tval, 'stat', sint);
 end
 
+% plot
 cfgp=[];
 cfgp.method = 'surface';
 cmap = flipud(brewermap(128, 'RdBu'));
@@ -107,33 +110,48 @@ cmap(1:64,:) = [];
 cfgp.funcolormap = cmap;
 cfgp.funparameter = 'avg';
 cfgp.funcolorlim = [0 80];
-cfgp.surffile = 'surface_white_both_shifted.mat';
-ft_sourceplot(cfgp, P); hold on
-ft_plot_sens(virtualchanpos,'elecshape','sphere', 'elecsize', 0.5, 'facecolor', 'black')
-view([0 52])
-h=light;lighting gouraud
-saveas(gcf, [figures_dir, 'induced_gamma.svg'])
+cfgp.colorbar = 'no';
+cfgp.surfinflated = 'surface_white_both_shifted.mat';
+ft_sourceplot(cfgp, sint)
 
-dum = load([projectdir, 'results/TFR_group.mat'],'L')
+virtualchanpos=[];
+virtualchanpos.chanpos = m2.mesh.pos(loc,:);
+virtualchanpos.elecpos = m2.mesh.pos(loc,:);
+for k=1:numel(loc)
+virtualchanpos.label{k}   = sprintf('%d', k);
+end
+ft_plot_sens(virtualchanpos,'elecshape','sphere', 'elecsize', 8, 'facecolor', 'black')
+
+maximize
+view([22 23]), light, material dull
+saveas(gcf, [figures_dir, 'induced_gamma_left.tif'])
+view([-33 24]), light, material dull
+saveas(gcf, [figures_dir, 'induced_gamma_right.tif'])
+view([-172 0]), light, material dull
+saveas(gcf, [figures_dir, 'induced_gamma_left_medial.tif'])
+view([-145 0]), light, material dull
+saveas(gcf, [figures_dir, 'induced_gamma_right_medial.tif'])
+
+% colorbar
+dum = load([projectdir, 'results/TFR_group.mat'],'L');
 cfgp2=[];
 cfgp2.colormap = cfgp.funcolormap;
-cfgp2.parameter = cfgp.funparameter;
-cfgp2.colorlim = cfgp.funcolorlim;
+cfgp2.zlim = cfgp.funcolorlim;
 figure; ft_singleplotTFR(cfgp2, dum.L);
-saveas(gcf, [figures_dir, 'induced_gamma_colorbar.eps'])
+saveas(gcf, [figures_dir, 'induced_gamma_colorbar.svg'])
 
 %% decoding accuracy
 addpath([projectdir, 'scripts/CanlabCore/CanlabCore/Visualization_functions/'])
 
 x = load([projectdir, 'results/stat_decoding']); 
 sprintf('DECODING ON MEG DATA')
-sprintf('decoding accuracy attended, left %d percent (SD %d), p=%d; right %d percent (SD %d), p=%d', round(100*x.accuracy(1,1).mean), round(100*x.accuracy(1,1).std), x.stat(1,1).prob, round(100*x.accuracy(1,2).mean), round(100*x.accuracy(1,2).std), x.stat(1,2).prob)
-sprintf('decoding accuracy unattended, left %d percent (SD %d), p=%d; right %d percent (SD %d), p=%d', round(100*x.accuracy(2,1).mean), round(100*x.accuracy(2,1).std), x.stat(2,1).prob, round(100*x.accuracy(2,2).mean), round(100*x.accuracy(2,2).std), x.stat(2,2).prob)
+sprintf('decoding accuracy attended, left %d percent (SD %d), p=%d; right %d percent (SD %d), p=%d', round(100*x.accuracy(1,1).mean), round(100*x.accuracy(1,1).std,1), x.stat(1,1).prob, round(100*x.accuracy(1,2).mean), round(100*x.accuracy(1,2).std,1), x.stat(1,2).prob)
+sprintf('decoding accuracy unattended, left %d percent (SD %d), p=%d; right %d percent (SD %d), p=%d', round(100*x.accuracy(2,2).mean), round(100*x.accuracy(2,2).std,1), x.stat(2,2).prob, round(100*x.accuracy(2,1).mean), round(100*x.accuracy(2,1).std,1), x.stat(2,1).prob)
 
 y = load([projectdir, 'results/stat_decoding_eye']); 
 sprintf('DECODING ON EYE DATA')
-sprintf('decoding accuracy attended, left %d percent (SD %d), p=%d; right %d percent (SD %d), p=%d', round(100*y.accuracy(1,1).mean), round(100*y.accuracy(1,1).std), y.stat(1,1).prob, round(100*y.accuracy(1,2).mean), round(100*y.accuracy(1,2).std), y.stat(1,2).prob)
-sprintf('decoding accuracy unattended, left %d percent (SD %d), p=%d; right %d percent (SD %d), p=%d', round(100*y.accuracy(2,1).mean), round(100*y.accuracy(2,1).std), y.stat(2,1).prob, round(100*y.accuracy(2,2).mean), round(100*y.accuracy(2,2).std), y.stat(2,2).prob)
+sprintf('decoding accuracy attended, left %d percent (SD %d), p=%d; right %d percent (SD %d), p=%d', round(100*y.accuracy(1,1).mean), round(100*y.accuracy(1,1).std,1), y.stat(1,1).prob, round(100*y.accuracy(1,2).mean), round(100*y.accuracy(1,2).std,1), y.stat(1,2).prob)
+sprintf('decoding accuracy unattended, left %d percent (SD %d), p=%d; right %d percent (SD %d), p=%d', round(100*y.accuracy(2,2).mean), round(100*y.accuracy(2,2).std,1), y.stat(2,2).prob, round(100*y.accuracy(2,1).mean), round(100*y.accuracy(2,1).std,1), y.stat(2,1).prob)
 
 cmap = brewermap(2,'RdBu');
 figure; violinplot(100*x.accuracy(1,1).all, 'facecolor', cmap(1,:), 'medc', [], 'x', 1, 'pointsize', 1)
@@ -148,23 +166,31 @@ saveas(gcf, [figures_dir, 'decoding_accuracy.eps'])
 addpath('RainCloudPlots/tutorial_matlab/')
 x=load([projectdir, 'results/stat_phasicmodulation_decoding']);
 freqs=4:30;
-leg = {'left', 'right'};
+side = {'left', 'right'};
 
 for k=1:2
 [~, ix] = max(x.stat(k).stat);
-sprintf('attend %s max amp %s percent (SD = %s), p=%s at %d Hz', leg{k}, num2str(round(mean(x.amp{k}(ix,:))*100,2)), num2str(round(std(x.amp{k}(ix,:))*100,2)), num2str(x.stat(k).uncorrected_p(ix)), freqs(ix))
+sprintf('attend %s max amp %s percent (SD = %s), p=%s at %d Hz', side{k}, num2str(round(mean(x.amp{k}(ix,:))*100,2)), num2str(round(std(x.amp{k}(ix,:))*100,2)), num2str(x.stat(k).uncorrected_p(ix)), freqs(ix))
 end
 
-figure;
 cmap = (brewermap(2,'RdBu'));
+figure
 for k=1:2
   subplot(1,2,k)
-  hold on, shadedErrorBar(4:30, mean(mean(x.amprand{k},3),2), mean(std(x.amprand{k},[],3),2), [], 1)
-  shadedErrorBar(4:30, mean(x.amp{k},2), std(x.amp{k},[],2), {'r', 'markerfacecolor', cmap(1,:)}, 1)
-  title(sprintf('attend %s', leg{k}))
-  xlim([4 30])
+  freqs=transpose(4:30);
+  y = mean(mean(x.amprand{k},3),2);
+  dy = mean(std(x.amprand{k},[],3),2);
+  fill([freqs;flipud(freqs)],[y-dy;flipud(y+dy)],[0.8 0.8 0.8],'linestyle','none');
+  line(freqs,y,'color', [0.5 0.5 0.5])
+  hold on
+  y = mean(x.amp{k},2);
+  dy = std(x.amp{k},[],2);
+  fill([freqs;flipud(freqs)],[y-dy;flipud(y+dy)],cmap(1,:),'linestyle','none');
+  line(freqs,y,'color', 'r')
+  xlim([4 30]), ylim([0 0.015])
+  title(sprintf('attend %s', side{k}))
+  saveas(gcf, [figures_dir, sprintf('phasic_modulation_virtualchan_%s.eps',side{k})])
 end
-saveas(gcf, [figures_dir, 'phasic_modulation_virtualchan.eps'])
 
 %% Phasic modulation of behavior
 x = load([results_dir, 'stat_phasicmodulation_behavior']);
@@ -200,6 +226,7 @@ s.time = t;
 ft_sourceplot(cfgp, s)
 view([0 90])
 maximize
+material dull
 saveas(gcf, [figures_dir, 'modulation_behavior_left_8hz.tif'])
 
 ix = match_str(s.label,  {'L_8_B05_06'});
@@ -230,6 +257,7 @@ s.time = t;
 ft_sourceplot(cfgp, s)
 view([0 90])
 maximize
+material dull
 saveas(gcf, [figures_dir, 'modulation_behavior_left_11hz.tif'])
 
 ix = match_str(s.label,  {'L_2_B05_06'});
@@ -253,6 +281,7 @@ s.time = t;
 ft_sourceplot(cfgp, s)
 view([0 60])
 maximize
+material dull
 saveas(gcf, [figures_dir, 'modulation_behavior_left_15hz.tif'])
 
 ix = match_str(s.label,  {'R_7_B05_01'});
@@ -279,6 +308,7 @@ s.stat = s.stat(:,tx);
 s.time = t;
 ft_sourceplot(cfgp, s)
 maximize
+material dull
 saveas(gcf, [figures_dir, 'modulation_behavior_right_13hz.tif'])
 
 ix = match_str(s.label,  {'L_8_B05_02'});
@@ -350,6 +380,7 @@ s.stat = s.stat(:,tx);
 ft_sourceplot(cfgp, s)
 view([0 90])
 maximize
+material dull
 saveas(gcf, [figures_dir, 'modulation_parc_left_4hz.tif'])
 
 % line plot
@@ -380,6 +411,7 @@ s.stat = s.stat(:,tx);
 ft_sourceplot(cfgp, s)
 view([0 90])
 maximize
+material dull
 saveas(gcf, [figures_dir, 'modulation_parc_right_4hz.tif'])
 
 % line plot
@@ -406,6 +438,7 @@ s.stat = s.stat(:,tx);
 ft_sourceplot(cfgp, s)
 view([0 90])
 maximize
+material dull
 saveas(gcf, [figures_dir, 'modulation_parc_right_10hz.tif'])
 
 % line plot #1
