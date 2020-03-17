@@ -1,4 +1,4 @@
-function [accuracy,centerphase,primal_P] = analysis_decoding(subj, contrast, varargin)
+function [accuracy,centerphase,primal_P, folddata] = analysis_decoding(subj, contrast, varargin)
 if ~exist('contrast', 'var') || nargin<2,       contrast = 'congruent'; end
 if ~exist('subj', 'var')     || nargin<1,       subj=4; end
 
@@ -21,6 +21,8 @@ doparc              = ft_getopt(varargin, 'doparc',              false);
 whichparc           = ft_getopt(varargin, 'whichparc',           []);
 do_posterf          = ft_getopt(varargin, 'do_posterf',          true);
 chansel             = ft_getopt(varargin, 'chansel',             'MEG');
+keepfolds           = ft_getopt(varargin, 'keepfolds',           false);
+timedecoding        = ft_getopt(varargin, 'timedecoding',        false);
 
 if ~do_randphasebin, nrandperm = 1; end
 if isempty(rngseed)
@@ -109,7 +111,6 @@ end
 
 data_orig=data;
 
-
 %% Split up conditions
 data = data_orig;
 
@@ -127,6 +128,10 @@ for k=1:size(idx_ori,1)
   end
   phasebin_orig{k} = phasebin(cfg.trials,:);
   phase_orig{k}    = phase(cfg.trials,:);
+  if timedecoding
+    phasebin_orig{k} = repmat(1:length(time),[size(phasebin_orig{k},1), 1]);
+    phase_orig{k} = repmat((0:2*pi/(nbins-1):2*pi),[size(phasebin_orig{k},1), 1]);
+  end
 end
 clear phasebin phase
 
@@ -143,9 +148,11 @@ for k=1:numel(dat)
   end
 end
 
+folddata = [];
+
 for irandperm = 1:nrandperm
   for k=1:numel(phasebin_orig)
-    if do_randphasebin && ~strcmp(chansel_orig,'eye')
+    if do_randphasebin && ~strcmp(chansel_orig,'eye') && ~timedecoding
       % circularly shift each row by a random amount, maximal 1 period
       % forward or backward in time.
       [s1, s2] = size(phasebin_orig{k});
@@ -271,7 +278,7 @@ for irandperm = 1:nrandperm
         indx_testtrials = sum(groupsize_fold(1,1:ifold))-groupsize_fold(ifold)+1:sum(groupsize_fold(1,1:ifold));
         [traindata, testdata, traindesign, testdesign, tmpP] = dml_preparedata(bindat(bin,:), indx_testtrials, 1, do_prewhiten);
         if ~isempty(tmpP), tmpP=tmpP; end
-        if do_randphasebin && (strcmp(chansel_orig,'eye') || nbins==1)
+        if do_randphasebin && (strcmp(chansel_orig,'eye') || nbins==1 || timedecoding)
           traindesign = traindesign(randperm(numel(traindesign)));
         end
         % initialize model
@@ -291,6 +298,10 @@ for irandperm = 1:nrandperm
         primal{iperm, bin,ifold} = model.primal;
         tmpacc = model.test(testdata);
         accuracy(irandperm, iperm, bin, ifold) = mean(double(double(tmpacc(:,1)>0)==mod(testdesign,2))); % this line works in a 2 class classification problem
+        if keepfolds % store testdata and performance for later use
+          folddata.testdata_fold{irandperm, ifold, bin} = testdata;
+          folddata.accuracy_fold{irandperm, ifold, bin} = double(double(tmpacc(:,1)>0)==mod(testdesign,2));
+        end
       end
     end
     clear bindat
