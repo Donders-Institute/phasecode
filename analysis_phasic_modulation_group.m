@@ -30,6 +30,7 @@ cfg.clusteralpha = 0.05;
 cfg.alpha = 0.05;
 cfg.clusterstatistic = 'maxsum';
 cfg.clusterthreshold = 'nonparametric_individual';
+cfg.correctm = 'cluster';
 cfg.connectivity = 1;
 cfg.dim = [1 nfreq];
 

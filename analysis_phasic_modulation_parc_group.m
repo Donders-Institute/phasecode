@@ -67,6 +67,7 @@ cfg.clusteralpha = 0.05;
 cfg.alpha = 0.05;
 cfg.clusterstatistic = 'maxsum';
 cfg.clusterthreshold = 'nonparametric_individual';
+cfg.correctm = 'cluster';
 switch whichdata
   case 'behavior'
     cfg.connectivity = full(parcellation2connectivity_midline(atlas));

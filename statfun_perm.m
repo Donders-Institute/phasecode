@@ -33,18 +33,19 @@
 if ~isfield(cfg, 'numrandomization'), numrandomization = 1; end
 if ~isfield(cfg, 'ivar'), error('ivar was not provided'); end
 if ~isfield(cfg, 'uvar'), error('uvar was not provided'); end
-cfg.alpha        = ft_getopt(cfg, 'alpha',      0.05);
-cfg.tail         = ft_getopt(cfg, 'tail',       0);
-cfg.correctm     = ft_getopt(cfg, 'correctm',   'no');
-cfg.resampling   = ft_getopt(cfg, 'resampling', 'permutation');
-cfg.clusteralpha = ft_getopt(cfg, 'clusteralpha',      0.05);
-cfg.clustertail  = ft_getopt(cfg, 'clustertail',      0);
+cfg.alpha            = ft_getopt(cfg, 'alpha',      0.05);
+cfg.tail             = ft_getopt(cfg, 'tail',       0);
+cfg.correctm         = ft_getopt(cfg, 'correctm',   'no');
+cfg.resampling       = ft_getopt(cfg, 'resampling', 'permutation');
+cfg.clusteralpha     = ft_getopt(cfg, 'clusteralpha',      0.05);
+cfg.clustertail      = ft_getopt(cfg, 'clustertail',      0);
 cfg.clusterstatistic = ft_getopt(cfg, 'clusterstatistic', 'maxsum');
 cfg.clusterthreshold = ft_getopt(cfg, 'clusterthreshold', 'parametric');
+cfg.correctm         = ft_getopt(cfg, 'correctm', []);
 
-Nrand = getfield(cfg, 'numrandomization');
-uvar = getfield(cfg, 'uvar');
-ivar = getfield(cfg, 'ivar');
+Nrand                = getfield(cfg, 'numrandomization');
+uvar                 = getfield(cfg, 'uvar');
+ivar                 = getfield(cfg, 'ivar');
 
 
 %---create and check independent variable
@@ -78,19 +79,25 @@ uncorrected_p = sum(statobs>statrand,2)./Nrand;
 if ~isfield(cfg, 'dim')
   cfg.dim = size(statobs);
 end
-cfg.feedback = 'no';
-
-stat = clusterstat(cfg, statrand, statobs);
-
-stat.stat = reshape(statobs, cfg.dim);
-stat.prob = reshape(stat.prob, cfg.dim);
-stat.uncorrected_p = reshape(uncorrected_p, cfg.dim);
-try
-  if cfg.tail>=0
-    stat.posclusterslabelmat = reshape(stat.posclusterslabelmat, cfg.dim);
+if strcmp(cfg.correctm, 'cluster');
+  cfg.feedback = 'no';
+  
+  stat = clusterstat(cfg, statrand, statobs);
+  
+  stat.stat = reshape(statobs, cfg.dim);
+  stat.prob = reshape(stat.prob, cfg.dim);
+  stat.uncorrected_p = reshape(uncorrected_p, cfg.dim);
+  try
+    if cfg.tail>=0
+      stat.posclusterslabelmat = reshape(stat.posclusterslabelmat, cfg.dim);
+    end
+    if cfg.tail<=0
+      stat.negclusterslabelmat = reshape(stat.negclusterslabelmat, cfg.dim);
+    end
   end
-  if cfg.tail<=0
-    stat.negclusterslabelmat = reshape(stat.negclusterslabelmat, cfg.dim);
-  end
+else
+  stat = [];
+  stat.stat = = statobs;
+  stat.uncorrectec_p = uncorrected_p;
 end
 
