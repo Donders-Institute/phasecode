@@ -97,7 +97,7 @@ if strcmp(cfg.correctm, 'cluster');
   end
 else
   stat = [];
-  stat.stat = = statobs;
+  stat.stat = statobs;
   stat.uncorrectec_p = uncorrected_p;
 end
 
