@@ -56,6 +56,7 @@ for f=freqs
   phase{cnt} = angle(squeeze(freq.fourierspctrm))+pi;
 end
 
+condition = data.trialinfo(:,1);
 rt = data.trialinfo(:,6);
 phi=cat(3,phase{:});
 
@@ -187,5 +188,5 @@ end
 
 if dosave
   filename = [projectdir, 'results/modulation/', sprintf('sub%02d_cosinefit_behavior_parc.mat', subj)];
-  save(filename, 'stat', 'ang','amp', 'amprand', 'angrand','phase')
+  save(filename, 'stat', 'ang','amp', 'amprand', 'angrand','phase', 'rtbin','phi', 'condition')
 end
