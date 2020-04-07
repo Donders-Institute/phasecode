@@ -13,14 +13,10 @@ switch whichdata
     freqs = 4:1:30;
   case 'neural'
     freqs = 4:1:20;
-      useparc = {'_7_B05_08','_7_B05_04','_7_B05_09','_7_B05_10','_7_B05_11',...
-    '_7_B05_12','_7_B05_13', '_19_B05_12', '_19_B05_09', '_8_B05_06', ...
-    '_7_B05_01','_7_B05_02','_7_B05_05','_7_B05_09', '_8_B05_06', ...
-    '_5_B05_02', '_5_B05_01', '_2_B05_08'};
-  for k=1:numel(useparc)
-    whichparc{k} = find(contains(atlas.parcellationlabel(selparc), useparc{k}));
-  end
-  whichparc = unique(cat(1,whichparc{:}));
+    for k=1:numel(useparc)
+      whichparc{k} = find(contains(atlas.parcellationlabel(selparc), useparc{k}));
+    end
+    whichparc = unique(cat(1,whichparc{:}));
 end
 hemis = [1 2];
 nperm = 100;
@@ -40,10 +36,10 @@ for subj=1:n
       tmp = load(filename);
       for h=hemis
         amp{h}(selparc, :, subj) = squeeze(tmp.amp(:,h,:))';
-        ang{h}(selparc, :, subj) = squeeze(tmp.ang(:,h,:))';      
+        ang{h}(selparc, :, subj) = squeeze(tmp.ang(:,h,:))';
         ampr{h}(selparc, :, subj,:) = permute(squeeze(tmp.amprand(:,h,:,:)),[2 1 3]);
       end
-    case 'neural' 
+    case 'neural'
       for w=1:numel(whichparc)
         tmp = load([projectdir,'results/modulation/', sprintf('sub%02d_phasicmodulation_decoding_parc_%d', subj, whichparc(w))], 'amp', 'amp_rand', 'ang');
         for h=hemis
@@ -54,7 +50,7 @@ for subj=1:n
       end
   end
 end
-      
+
 
 % do 2nd level permutation
 cfg=[];
@@ -91,7 +87,7 @@ for h=hemis
   stat{h}.randmean = mean(mean(ampr{h},4),3);
 end
 for h=1:2
-    ampr{h} = nanmean(ampr{h},4);
+  ampr{h} = nanmean(ampr{h},4);
 end
 
 switch whichdata

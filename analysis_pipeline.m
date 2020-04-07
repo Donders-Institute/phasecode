@@ -24,7 +24,7 @@ hemis = [1 2];
 
 
 % Time-frequency analysis
-
+analysis_timfreq(subj)
 
 
 % virtual channel based on maximal induced gamma power
@@ -187,12 +187,6 @@ end
 load atlas_subparc374_8k.mat
 exclude_label = match_str(atlas.parcellationlabel, {'L_???_01', 'L_MEDIAL.WALL_01', 'R_???_01', 'R_MEDIAL.WALL_01'});
 selparc = setdiff(1:numel(atlas.parcellationlabel),exclude_label); % hard coded exclusion of midline and ???
-% useparc = {'_7_B05_08','_7_B05_04','_7_B05_09','_7_B05_10','_7_B05_11','_7_B05_12','_7_B05_13', '_19_B05_12', '_19_B05_09', '_8_B05_06'};
-% useparc = {'_7_B05_01','_7_B05_02','_7_B05_05','_7_B05_09', '_8_B05_06', '_5_B05_02', '_5_B05_01', '_2_B05_08'};
-useparc = {'_7_B05_08','_7_B05_04','_7_B05_09','_7_B05_10','_7_B05_11',...
-  '_7_B05_12','_7_B05_13', '_19_B05_12', '_19_B05_09', '_8_B05_06', ...
-  '_7_B05_01','_7_B05_02','_7_B05_05','_7_B05_09', '_8_B05_06', ...
-  '_5_B05_02', '_5_B05_01', '_2_B05_08'};
 for k=1:numel(useparc)
   whichparc{k} = find(contains(atlas.parcellationlabel(selparc), useparc{k}));
 end

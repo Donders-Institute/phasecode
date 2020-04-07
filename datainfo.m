@@ -1,13 +1,15 @@
 subjects = [];
 valid_subjects=1:10;
-%% pilot
-% subjects(1).dataset = '/home/electromag/matves/Data/phasecode/meg_raw/pilot/matspilot1_1200hz_20150330_01.ds';
-% subjects(1).trialfun = 'mytrialfun_pilot';
+%% directories
 projectdir = '/project/3011085.06/';
 datadir = [projectdir, 'data/'];
 figures_dir = [projectdir, 'manuscript/figures/'];
 results_dir = [projectdir, 'results/'];
-%% experiment
+
+%% subject info
+% subjects(1).dataset = '/home/electromag/matves/Data/phasecode/meg_raw/pilot/matspilot1_1200hz_20150330_01.ds';
+% subjects(1).trialfun = 'mytrialfun_pilot';
+
 % 1
 subjects(1).sessions = [1,2,3];
 subjects(1).validsessions = [1,2,3]; % of the preprocessed sessions.
@@ -110,3 +112,10 @@ subjects(10).session(22).dataset = [datadir, 'sub10/meg02/301604507matves102c_12
 subjects(10).session(3).dataset = [datadir, 'sub10/meg03/301604507matves103_1200hz_20150812_01.ds'];
 subjects(10).trialfun = 'mytrialfun';
 subjects(10).mri = [datadir, 'sub10/mri/PAUGAA_20141110_S04.MR.DCCN_SEQUENCES_STANDARD_SEQUENCES.0002.0001.2014.11.10.16.38.38.18220.50186354.IMA'];
+
+%% variables
+useparc = {'_7_B05_08','_7_B05_04','_7_B05_09','_7_B05_10','_7_B05_11',...
+  '_7_B05_12','_7_B05_13', '_19_B05_12', '_19_B05_09', '_8_B05_06', ...
+  '_7_B05_01','_7_B05_02','_7_B05_05','_7_B05_09', '_8_B05_06', ...
+  '_5_B05_02', '_5_B05_01', '_2_B05_08','_8_B05_02','_8_B05_03'};
+
