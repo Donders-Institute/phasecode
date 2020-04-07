@@ -307,7 +307,7 @@ for irandperm = 1:nrandperm
     clear bindat
   end
   
-  if do_randphasebin && ~strcmp(chansel_orig, 'eye') && ~doparc
+if do_randphasebin && ~strcmp(chansel_orig, 'eye') && ~doparc
   tmpprimal_P = zeros(size(primal,1), size(primal,2), size(primal,3), nchan);
   for k=1:size(primal,1)
     for j=1:size(primal,2)
