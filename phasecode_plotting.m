@@ -184,7 +184,6 @@ cfgp.zlim = 'maxabs';
 cfgp.numcontour = 0;
 cfgp.gridscale = 250;
 cfgp.marker = 'off';
-cfgp.interpolation      = 'cubic'
 sc = {'a', 'b'};
 for h=hemis
   for subj=valid_subjects
@@ -203,14 +202,16 @@ freqs=4:30;
 side = {'left', 'right'};
 
 for k=1:2
-  [~, ix] = max(x.stat(k).stat);
-  sprintf('attend %s max amp %s percent (SD = %s), p=%s at %d Hz', side{k}, num2str(round(mean(x.amp{k}(ix,:))*100,2)), num2str(round(std(x.amp{k}(ix,:))*100,2)), num2str(x.stat(k).uncorrected_p(ix)), freqs(ix))
+  [~, ix(k)] = max(x.stat(k).stat);
+  sprintf('attend %s max amp %s percent (SD = %s), p=%s at %d Hz', side{k}, num2str(round(mean(x.amp{k}(ix(k),:))*100,2)), num2str(round(std(x.amp{k}(ix(k),:))*100,2)), num2str(x.stat(k).uncorrected_p(ix(k))), freqs(ix(k)))
 end
 
 cmap = (brewermap(2,'RdBu'));
-figure
+c = brewermap(10, 'dark2');
+ix = [8 6];% 11 and 9 Hz
 for k=1:2
-  subplot(1,2,k)
+  figure;
+  subplot(1,2,1)
   freqs=transpose(4:30);
   y = mean(mean(x.amprand{k},3),2);
   dy = mean(std(x.amprand{k},[],3),2);
@@ -223,41 +224,41 @@ for k=1:2
   line(freqs,y,'color', 'r')
   xlim([4 30]), ylim([0 0.015])
   title(sprintf('attend %s', side{k}))
-  saveas(gcf, [figures_dir, sprintf('phasic_modulation_virtualchan_%s.eps',side{k})],'eosc')
+  
+  subplot(1,2,2), hold on
+  for ii=1:10
+    plot([1 4], [squeeze(x.amprand{k}(ix(k),ii)), squeeze(x.amp{k}(ix(k),ii))], '--o', 'color', c(ii,:))
+  end
+  plot([1 4], [mean(x.amprand{k}(ix(k),:)), mean(x.amp{k}(ix(k),:))], '-ok', 'linewidth', 2)
+  xlim([0 5]); ylim([0 0.02])
+  maximize
+%   saveas(gcf, [figures_dir, sprintf('phasic_modulation_virtualchan_%s.eps',side{k})],'epsc')
 end
 
 %% Phasic modulation of behavior
 x = load([results_dir, 'stat_phasicmodulation_behavior']);
 dum = load([projectdir, 'results/TFR_group.mat'],'L');
-
+freqs = x.stat{1}.time;
 %%%%%%%%%%%%%
 % statistic %
 %%%%%%%%%%%%%
 % attend left
-x.stat{1}.mask = x.stat{1}.posclusterslabelmat==1; % visual inspection 
-% shows that this cluster is mostly present in parietal regions, 9-15 Hz
-f1 = find(x.stat{1}.time==9);
-f2 = find(x.stat{1}.time==17);
-params={'stat', 'std'};
+ix=8; fx = 5;
+f1 = find(x.stat{1}.time==8);
+f2 = find(x.stat{1}.time==8);
+params={'stat', 'std', 'prob'};
 for k=1:numel(params)
-  y = x.stat{1}.(params{k}).*x.stat{1}.mask;
-  y(y==0)=nan;
-  s(k) = nanmean(nanmean(y(:,f1:f2)))*100;
+  s(k) = x.stat{1}.(params{k})(ix,fx)*100;
 end
-sprintf('attend left: cluster 1: parietal regions, 9-17 Hz, clusterstat = %d, mean = %d , SD = %d percent, p = %d',100*x.stat{1}.posclusters(1).clusterstat, s(1), s(2), x.stat{1}.posclusters(1).prob)
+sprintf('attend left: cluster 1: left FEF, 8 Hz, mean = %d , SD = %d percent, p = %d', s(1), s(2), s(3)/100)
 
 % attend right
-x.stat{2}.mask = x.stat{2}.posclusterslabelmat==1; % visual inspection 
-% shows that this cluster is mostly present in parietal regions, 9-15 Hz
-f1 = find(x.stat{1}.time==9);
-f2 = find(x.stat{1}.time==17);
-params={'stat', 'std'};
+ix=4; fx = 10;
+params={'stat', 'std', 'prob'};
 for k=1:numel(params)
-  y = x.stat{2}.(params{k}).*x.stat{2}.mask;
-  y(y==0)=nan;
-  s(k) = nanmean(nanmean(y(:,f1:f2)))*100;
+  s(k) = x.stat{1}.(params{k})(ix,fx)*100;
 end
-sprintf('attend right: cluster 1: parietal regions, 9-17 Hz, clusterstat = %d, mean = %d , SD = %d percent, p = %d',100*x.stat{2}.posclusters(1).clusterstat, s(1), s(2), x.stat{2}.posclusters(1).prob)
+sprintf('attend right: cluster 1: left FEF, 13 Hz, mean = %d , SD = %d percent, p = %d', s(1), s(2), x.stat{2}.posclusters(1).prob)
 
 
 %%%%%%%%%%%%%%%%%%
@@ -286,10 +287,15 @@ cfgp.maskparameter = cfgp.funparameter;
 % attend left %
 %%%%%%%%%%%%%%%
 k=1;
+Y = x.stat{k}.randmean';
+dY = x.stat{k}.randstd';
+Z = x.stat{k}.stat';
+dZ = x.stat{k}.std';
+
 s = x.stat{k};
 t=8;
 tx = s.time==t;
-s.stat = s.stat(:,tx);
+s.stat = s.mean(:,tx);
 s.time = t;
 ft_sourceplot(cfgp, s)
 view([0 90])
@@ -298,70 +304,70 @@ material dull
 saveas(gcf, [figures_dir, 'modulation_behavior_left_8hz.tif'])
 
 ix = match_str(s.label,  {'L_8_B05_06'});
-figure; 
+figure; hold on,
 y=[2e-3 23e-3];
-hold on, plot(4:30, x.stat{k}.randmean(ix,:), 'k')
-plot(4:30, x.stat{k}.stat(ix,:), 'color', cmap2(1,:))
+fill([freqs';flipud(freqs')],[Y(:,ix)-dY(:,ix);flipud(Y(:,ix)+dY(:,ix))],[0.8 0.8 0.8],'linestyle','none');
+line(freqs,Y(:,ix),'color', [0.5 0.5 0.5])
+fill([freqs';flipud(freqs')],[Z(:,ix)-dZ(:,ix);flipud(Z(:,ix)+dZ(:,ix))],cmap2(1,:),'linestyle','none');
+line(freqs,Z(:,ix),'color', 'r')
 % first plot 8 Hz
 hold on, for ii=1:10
-plot(30+[1 5], [squeeze(x.ampr{k}(ix,tx,ii)), squeeze(x.amp{k}(ix,tx,ii))], '--o', 'color', c(ii,:))
+plot(freqs(end)+[1 5], [squeeze(x.ampr{k}(ix,tx,ii)), squeeze(x.amp{k}(ix,tx,ii))], '--o', 'color', c(ii,:))
 end
-plot(30+[1 5], [mean(x.ampr{k}(ix,tx,:)), mean(x.amp{k}(ix,tx,:))], '-ok', 'linewidth', 2)
-% also plot 17 Hz
-tx2 = x.stat{k}.time==17;
-for ii=1:10
-plot(30+[6 10], [squeeze(x.ampr{k}(ix,tx2,ii)), squeeze(x.amp{k}(ix,tx2,ii))], '--o', 'color', c(ii,:))
-end
-plot(30+[6 10], [mean(x.ampr{k}(ix,tx2,:)), mean(x.amp{k}(ix, tx2,:))], '-ok', 'linewidth',2 )
-xlim([4 41]), ylim(y)
+plot(freqs(end)+[1 5], [mean(x.ampr{k}(ix,tx,:)), mean(x.amp{k}(ix,tx,:))], '-ok', 'linewidth', 2)
+xlim([4 26]), ylim(y)
 maximize
 saveas(gcf, [figures_dir, 'modulation_behavior_left_L8_06.eps'],'epsc')
 
 s = x.stat{k};
-t=11;
+t=14;
 tx = s.time==t;
-s.stat = s.stat(:,tx);
+s.stat = s.mean(:,tx);
 s.time = t;
 ft_sourceplot(cfgp, s)
 view([0 90])
 maximize
 material dull
-saveas(gcf, [figures_dir, 'modulation_behavior_left_11hz.tif'])
+saveas(gcf, [figures_dir, 'modulation_behavior_left_14hz.tif'])
 
-ix = match_str(s.label,  {'L_2_B05_06'});
-figure; 
+ix = match_str(s.label,  {'L_5_B05_01'});
+figure; hold on
 y=[2e-3 23e-3];
-hold on, plot(4:30, x.stat{k}.randmean(ix,:), 'k')
-plot(4:30, x.stat{k}.stat(ix,:), 'color', cmap2(1,:))
+fill([freqs';flipud(freqs')],[Y(:,ix)-dY(:,ix);flipud(Y(:,ix)+dY(:,ix))],[0.8 0.8 0.8],'linestyle','none');
+line(freqs,Y(:,ix),'color', [0.5 0.5 0.5])
+fill([freqs';flipud(freqs')],[Z(:,ix)-dZ(:,ix);flipud(Z(:,ix)+dZ(:,ix))],cmap2(1,:),'linestyle','none');
+line(freqs,Z(:,ix),'color', 'r')
 hold on, for ii=1:10
-plot(30+[1 5], [squeeze(x.ampr{k}(ix,tx,ii)), squeeze(x.amp{k}(ix,tx,ii))], '--o', 'color', c(ii,:))
+plot(freqs(end)+[1 5], [squeeze(x.ampr{k}(ix,tx,ii)), squeeze(x.amp{k}(ix,tx,ii))], '--o', 'color', c(ii,:))
 end
-plot(30+[1 5], [mean(x.ampr{k}(ix,tx,:)), mean(x.amp{k}(ix,tx,:))], '-ok', 'linewidth', 2)
-xlim([4 36]), ylim(y)
+plot(freqs(end)+[1 5], [mean(x.ampr{k}(ix,tx,:)), mean(x.amp{k}(ix,tx,:))], '-ok', 'linewidth', 2)
+xlim([4 26]), ylim(y)
 maximize
-saveas(gcf, [figures_dir, 'modulation_behavior_left_L2_06.eps'],'epsc')
+saveas(gcf, [figures_dir, 'modulation_behavior_left_L5_01.eps'],'epsc')
 
 s = x.stat{k};
-t=15;
+t=12;
 tx = s.time==t;
-s.stat = s.stat(:,tx);
+s.stat = s.mean(:,tx);
 s.time = t;
 ft_sourceplot(cfgp, s)
 view([0 60])
 maximize
 material dull
-saveas(gcf, [figures_dir, 'modulation_behavior_left_15hz.tif'])
+saveas(gcf, [figures_dir, 'modulation_behavior_left_12hz.tif'])
 
 ix = match_str(s.label,  {'R_7_B05_01'});
-figure; 
-y=[0e-3 24e-3];
-hold on, plot(4:30, x.stat{k}.randmean(ix,:), 'k')
-plot(4:30, x.stat{k}.stat(ix,:), 'color', cmap2(1,:))
+figure; hold on,
+y=[2e-3 20e-3];
+fill([freqs';flipud(freqs')],[Y(:,ix)-dY(:,ix);flipud(Y(:,ix)+dY(:,ix))],[0.8 0.8 0.8],'linestyle','none');
+line(freqs,Y(:,ix),'color', [0.5 0.5 0.5])
+fill([freqs';flipud(freqs')],[Z(:,ix)-dZ(:,ix);flipud(Z(:,ix)+dZ(:,ix))],cmap2(1,:),'linestyle','none');
+line(freqs,Z(:,ix),'color', 'r')
 hold on, for ii=1:10
-plot(30+[1 5], [squeeze(x.ampr{k}(ix,tx,ii)), squeeze(x.amp{k}(ix,tx,ii))], '--o', 'color', c(ii,:))
+plot(freqs(end)+[1 5], [squeeze(x.ampr{k}(ix,tx,ii)), squeeze(x.amp{k}(ix,tx,ii))], '--o', 'color', c(ii,:))
 end
-plot(30+[1 5], [mean(x.ampr{k}(ix,tx,:)), mean(x.amp{k}(ix,tx,:))], '-ok', 'linewidth', 2)
-xlim([4 36]), ylim(y)
+plot(freqs(end)+[1 5], [mean(x.ampr{k}(ix,tx,:)), mean(x.amp{k}(ix,tx,:))], '-ok', 'linewidth', 2)
+xlim([4 26]), ylim(y)
 maximize
 saveas(gcf, [figures_dir, 'modulation_behavior_left_R7_01.eps'],'epsc')
 
@@ -369,10 +375,15 @@ saveas(gcf, [figures_dir, 'modulation_behavior_left_R7_01.eps'],'epsc')
 % attend right %
 %%%%%%%%%%%%%%%%
 k=2;
+Y = x.stat{k}.randmean';
+dY = x.stat{k}.randstd';
+Z = x.stat{k}.stat';
+dZ = x.stat{k}.std';
+
 s = x.stat{k};
 t=13;
 tx = s.time==t;
-s.stat = s.stat(:,tx);
+s.stat = s.mean(:,tx);
 s.time = t;
 ft_sourceplot(cfgp, s)
 maximize
@@ -380,30 +391,19 @@ material dull
 saveas(gcf, [figures_dir, 'modulation_behavior_right_13hz.tif'])
 
 ix = match_str(s.label,  {'L_8_B05_02'});
-figure; 
+figure; hold on,
 y=[3e-3 22e-3];
-hold on, plot(4:30, x.stat{k}.randmean(ix,:), 'k')
-plot(4:30, x.stat{k}.stat(ix,:), 'color', cmap2(1,:))
-hold on, for ii=1:10
-plot(30+[1 5], [squeeze(x.ampr{k}(ix,tx,ii)), squeeze(x.amp{k}(ix,tx,ii))], '--o', 'color', c(ii,:))
+fill([freqs';flipud(freqs')],[Y(:,ix)-dY(:,ix);flipud(Y(:,ix)+dY(:,ix))],[0.8 0.8 0.8],'linestyle','none');
+line(freqs,Y(:,ix),'color', [0.5 0.5 0.5])
+fill([freqs';flipud(freqs')],[Z(:,ix)-dZ(:,ix);flipud(Z(:,ix)+dZ(:,ix))],cmap2(1,:),'linestyle','none');
+line(freqs,Z(:,ix),'color', 'r')
+for ii=1:10
+plot(freqs(end)+[1 5], [squeeze(x.ampr{k}(ix,tx,ii)), squeeze(x.amp{k}(ix,tx,ii))], '--o', 'color', c(ii,:))
 end
-plot(30+[1 5], [mean(x.ampr{k}(ix,tx,:)), mean(x.amp{k}(ix,tx,:))], '-ok', 'linewidth', 2)
-xlim([4 36]), ylim(y)
+plot(freqs(end)+[1 5], [mean(x.ampr{k}(ix,tx,:)), mean(x.amp{k}(ix,tx,:))], '-ok', 'linewidth', 2)
+xlim([4 26]), ylim(y)
 maximize
 saveas(gcf, [figures_dir, 'modulation_behavior_right_L8_02.eps'],'epsc')
-
-ix = match_str(s.label,  {'L_5_B05_03'});
-figure; 
-y=[0e-3 19e-3];
-hold on, plot(4:30, x.stat{k}.randmean(ix,:), 'k')
-plot(4:30, x.stat{k}.stat(ix,:), 'color', cmap2(1,:))
-hold on, for ii=1:10
-plot(30+[1 5], [squeeze(x.ampr{k}(ix,tx,ii)), squeeze(x.amp{k}(ix,tx,ii))], '--o', 'color', c(ii,:))
-end
-plot(30+[1 5], [mean(x.ampr{k}(ix,tx,:)), mean(x.amp{k}(ix,tx,:))], '-ok', 'linewidth', 2)
-xlim([4 36]), ylim(y)
-maximize
-saveas(gcf, [figures_dir, 'modulation_behavior_right_L5_03.eps'],'epsc')
 
 cfgp2=[];
 cfgp2.colormap = cfgp.funcolormap;
@@ -413,6 +413,7 @@ saveas(gcf, [figures_dir, 'modulation_behavior_colorbar.eps'],'epsc')
 
 %% Modulation decoding - parcel level
 x=load([projectdir, 'results/stat_phasicmodulation_decoding_parc']);
+x.topostat = analysis_phasic_modulation_topography;
 addpath([projectdir, 'scripts/CanlabCore/CanlabCore/Visualization_functions/'])
 
 %%%%%%%%%%%%%
@@ -448,7 +449,7 @@ sprintf('attend right: cluster 1: left parietal cortex and FEF, 8-12 Hz, cluster
 % color settings
 c=brewermap(10,'Set3');
 dum = load([projectdir, 'results/TFR_group.mat'],'L');
-n=64;
+n=10;
 cmap = (brewermap(n, 'RdBu'));
 cmap = flipud(cmap(1:n/2,:));
 cmap2 = (brewermap(2,'RdBu'));
@@ -464,10 +465,27 @@ cfgp.facecolor = 'skin';
 cfgp.maskparameter = cfgp.funparameter;
 cfgp.funcolorlim = [0 0.014];
 
+% create mask showing the selected ROIs
+cfgp2=cfgp;
+cfgp2.funcolormap = [0 0 0; 0.5 0.5 0.5];
+dum = x.stat{1};
+dum.time=0;
+dum.stat = zeros(374,1);
+dum.stat(selparc(whichparc))=1;
+ft_sourceplot(cfgp2, dum)
+view([0 90])
+maximize
+material dull
+saveas(gcf, [figures_dir, 'methods_roi_mask.tif'])
 %%%%%%%%%%%%%%%
 % attend left %
 %%%%%%%%%%%%%%%
 k=1;
+Y = x.stat{k}.randmean';
+dY = x.stat{k}.randstd';
+Z = x.stat{k}.stat';
+dZ = x.stat{k}.std';
+
 s = x.stat{k};
 t = 4;
 tx = s.time==t;
@@ -475,17 +493,19 @@ s.time = t;
 s.stat = s.stat(:,tx);
 
 % sourceplot
-ft_sourceplot(cfgp, s)
+ft_sourceplot(cfgp, s2)
 view([0 90])
 maximize
 material dull
 saveas(gcf, [figures_dir, 'modulation_parc_left_4hz.tif'])
 
 % line plot
-figure;
+figure;hold on
 ix = match_str(x.stat{k}.label, 'R_8_B05_06');
-hold on, plot(4:20, x.stat{k}.randmean(ix,:), 'k')
-plot(4:20, x.stat{k}.stat(ix,:), 'color', cmap2(1,:))
+fill([freqs';flipud(freqs')],[Y(:,ix)-dY(:,ix);flipud(Y(:,ix)+dY(:,ix))],[0.8 0.8 0.8],'linestyle','none');
+line(freqs,Y(:,ix),'color', [0.5 0.5 0.5])
+fill([freqs';flipud(freqs')],[Z(:,ix)-dZ(:,ix);flipud(Z(:,ix)+dZ(:,ix))],cmap2(1,:),'linestyle','none');
+line(freqs,Z(:,ix),'color', 'r')
 for ii=1:10
 plot(20+[1 4], [squeeze(x.ampr{k}(ix,tx,ii)), squeeze(x.amp{k}(ix,tx,ii))], '--o', 'color', c(ii,:))
 end
@@ -508,10 +528,12 @@ material dull
 saveas(gcf, [figures_dir, 'modulation_parc_left_9hz.tif'])
 
 % line plot
-figure;
+figure; hold on
 ix = match_str(x.stat{k}.label, 'R_19_B05_12');
-hold on, plot(4:20, x.stat{k}.randmean(ix,:), 'k')
-plot(4:20, x.stat{k}.stat(ix,:), 'color', cmap2(1,:))
+fill([freqs';flipud(freqs')],[Y(:,ix)-dY(:,ix);flipud(Y(:,ix)+dY(:,ix))],[0.8 0.8 0.8],'linestyle','none');
+line(freqs,Y(:,ix),'color', [0.5 0.5 0.5])
+fill([freqs';flipud(freqs')],[Z(:,ix)-dZ(:,ix);flipud(Z(:,ix)+dZ(:,ix))],cmap2(1,:),'linestyle','none');
+line(freqs,Z(:,ix),'color', 'r')
 for ii=1:10
 plot(20+[1 4], [squeeze(x.ampr{k}(ix,tx,ii)), squeeze(x.amp{k}(ix,tx,ii))], '--o', 'color', c(ii,:))
 end
@@ -534,10 +556,12 @@ material dull
 saveas(gcf, [figures_dir, 'modulation_parc_left_20hz.tif'])
 
 % line plot
-figure;
+figure;hold on
 ix = match_str(x.stat{k}.label, 'R_8_B05_02');
-hold on, plot(4:20, x.stat{k}.randmean(ix,:), 'k')
-plot(4:20, x.stat{k}.stat(ix,:), 'color', cmap2(1,:))
+fill([freqs';flipud(freqs')],[Y(:,ix)-dY(:,ix);flipud(Y(:,ix)+dY(:,ix))],[0.8 0.8 0.8],'linestyle','none');
+line(freqs,Y(:,ix),'color', [0.5 0.5 0.5])
+fill([freqs';flipud(freqs')],[Z(:,ix)-dZ(:,ix);flipud(Z(:,ix)+dZ(:,ix))],cmap2(1,:),'linestyle','none');
+line(freqs,Z(:,ix),'color', 'r')
 for ii=1:10
 plot(20+[1 4], [squeeze(x.ampr{k}(ix,tx,ii)), squeeze(x.amp{k}(ix,tx,ii))], '--o', 'color', c(ii,:))
 end
@@ -567,6 +591,11 @@ end
 %%%%%%%%%%%%%%%%
 % #1
 k=2;
+Y = x.stat{k}.randmean';
+dY = x.stat{k}.randstd';
+Z = x.stat{k}.stat';
+dZ = x.stat{k}.std';
+
 s = x.stat{k};
 t = 4;
 tx = s.time==t;
@@ -581,10 +610,12 @@ material dull
 saveas(gcf, [figures_dir, 'modulation_parc_right_4hz.tif'])
 
 % line plot
-figure;
+figure;hold on
 ix = match_str(x.stat{k}.label, 'L_7_B05_05');
-hold on, plot(4:20, x.stat{k}.randmean(ix,:), 'k')
-plot(4:20, x.stat{k}.stat(ix,:), 'color', cmap2(1,:))
+fill([freqs';flipud(freqs')],[Y(:,ix)-dY(:,ix);flipud(Y(:,ix)+dY(:,ix))],[0.8 0.8 0.8],'linestyle','none');
+line(freqs,Y(:,ix),'color', [0.5 0.5 0.5])
+fill([freqs';flipud(freqs')],[Z(:,ix)-dZ(:,ix);flipud(Z(:,ix)+dZ(:,ix))],cmap2(1,:),'linestyle','none');
+line(freqs,Z(:,ix),'color', 'r')
 for ii=1:10
 plot(20+[1 4], [squeeze(x.ampr{k}(ix,tx,ii)), squeeze(x.amp{k}(ix,tx,ii))], '--o', 'color', c(ii,:))
 end
@@ -608,10 +639,12 @@ material dull
 saveas(gcf, [figures_dir, 'modulation_parc_right_10hz.tif'])
 
 % line plot #1
-figure;
+figure;hold on
 ix = match_str(x.stat{k}.label, 'L_5_B05_02');
-hold on, plot(4:20, x.stat{k}.randmean(ix,:), 'k')
-plot(4:20, x.stat{k}.stat(ix,:), 'color', cmap2(1,:))
+fill([freqs';flipud(freqs')],[Y(:,ix)-dY(:,ix);flipud(Y(:,ix)+dY(:,ix))],[0.8 0.8 0.8],'linestyle','none');
+line(freqs,Y(:,ix),'color', [0.5 0.5 0.5])
+fill([freqs';flipud(freqs')],[Z(:,ix)-dZ(:,ix);flipud(Z(:,ix)+dZ(:,ix))],cmap2(1,:),'linestyle','none');
+line(freqs,Z(:,ix),'color', 'r')
 for ii=1:10
 plot(20+[1 4], [squeeze(x.ampr{k}(ix,tx,ii)), squeeze(x.amp{k}(ix,tx,ii))], '--o', 'color', c(ii,:))
 end
@@ -648,10 +681,12 @@ material dull
 saveas(gcf, [figures_dir, 'modulation_parc_right_13hz.tif'])
 
 % line plot #1
-figure;
+figure; hold on
 ix = match_str(x.stat{k}.label, 'L_8_B05_02');
-hold on, plot(4:20, x.stat{k}.randmean(ix,:), 'k')
-plot(4:20, x.stat{k}.stat(ix,:), 'color', cmap2(1,:))
+fill([freqs';flipud(freqs')],[Y(:,ix)-dY(:,ix);flipud(Y(:,ix)+dY(:,ix))],[0.8 0.8 0.8],'linestyle','none');
+line(freqs,Y(:,ix),'color', [0.5 0.5 0.5])
+fill([freqs';flipud(freqs')],[Z(:,ix)-dZ(:,ix);flipud(Z(:,ix)+dZ(:,ix))],cmap2(1,:),'linestyle','none');
+line(freqs,Z(:,ix),'color', 'r')
 for ii=1:10
 plot(20+[1 4], [squeeze(x.ampr{k}(ix,tx,ii)), squeeze(x.amp{k}(ix,tx,ii))], '--o', 'color', c(ii,:))
 end
@@ -666,6 +701,24 @@ cfgp2.colormap = cfgp.funcolormap;
 cfgp2.zlim = cfgp.funcolorlim;
 figure; ft_singleplotTFR(cfgp2, dum.L);
 saveas(gcf, [figures_dir, 'modulation_parc_colorbar.eps'],'epsc')
+
+
+%%%%%%%%%%%%%%
+% WHOLEBRAIN %
+clim = [0.015, 0.011, 0.011; 0.015, 0.011, 0.011];
+for h=[1 2]
+s=x.topostat{h};
+s.time=0;
+for k=1:3
+s.stat = s.mean(:,k);
+cfgp.funcolorlim = [0.006 clim(h,k)];
+cfgp.funcolormap = cmap;
+ft_sourceplot(cfgp, s)
+view([0 90])
+maximize
+material dull
+end
+end
 
 %% Suplemental : phase
 datainfo;
