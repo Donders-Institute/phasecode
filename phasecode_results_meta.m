@@ -40,13 +40,13 @@ for ses=subjects(subj).validsessions
 end
 data = ft_appenddata([], tmp{:});
 cfg=[];
-cfg.trials = (data.trialinfo(:,1)==data.trialinfo(:,4));
+cfg.trials = (data.trialinfo(:,1)==data.trialinfo(:,4)); % validly cued
 data = ft_selectdata(cfg, data);
 ntrialsOI(subj) = numel(data.trial);
 
 % behavioral performance
 cfg=[];
-cfg.trials = (data.trialinfo(:,7)==1);
+cfg.trials = (data.trialinfo(:,7)==1); % correct
 performance(subj) = sum(cfg.trials)./numel(cfg.trials)*100;
 ntrialsAnalysis(subj) = sum(cfg.trials);
 
