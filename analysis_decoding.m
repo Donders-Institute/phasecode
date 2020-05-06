@@ -1,4 +1,4 @@
-function [accuracy,centerphase,primal_P, folddata] = analysis_decoding(subj, contrast, varargin)
+function [accuracy,centerphase,primal_P, folddata, returndata] = analysis_decoding(subj, contrast, varargin)
 if ~exist('contrast', 'var') || nargin<2,       contrast = 'congruent'; end
 if ~exist('subj', 'var')     || nargin<1,       subj=4; end
 
@@ -23,7 +23,9 @@ do_posterf          = ft_getopt(varargin, 'do_posterf',          true);
 chansel             = ft_getopt(varargin, 'chansel',             'MEG');
 keepfolds           = ft_getopt(varargin, 'keepfolds',           false);
 timedecoding        = ft_getopt(varargin, 'timedecoding',        false);
+do_controleye       = ft_getopt(varargin, 'do_controleye',       false);
 
+if ~do_controleye, returndata = []; end
 if ~do_randphasebin, nrandperm = 1; end
 if isempty(rngseed)
   rng('shuffle'); rngseed = rand(1)*10^6;
@@ -271,12 +273,19 @@ for irandperm = 1:nrandperm
     rem = ngroups-sum(groupsize_fold);
     groupsize_fold = groupsize_fold + [ones(1,rem), zeros(1,nfolds-rem)];
     
+    if do_controleye % take the data do a different function for itterative use
+      returndata.ngroups = ngroups;
+      returndata.bindat = bindat;
+      accuracy=[]; centerphase=[]; primal_P=[]; folddata=[];
+      return;
+    end
     for bin = 1:nbins
       % n-fold cross validation
       for ifold=1:nfolds
         % select data per fold and pre-whiten
         indx_testtrials = sum(groupsize_fold(1,1:ifold))-groupsize_fold(ifold)+1:sum(groupsize_fold(1,1:ifold));
         [traindata, testdata, traindesign, testdesign, tmpP] = dml_preparedata(bindat(bin,:), indx_testtrials, 1, do_prewhiten);
+
         if ~isempty(tmpP), tmpP=tmpP; end
         if do_randphasebin && (strcmp(chansel_orig,'eye') || nbins==1 || timedecoding)
           traindesign = traindesign(randperm(numel(traindesign)));
