@@ -106,6 +106,10 @@ for c = 1:numel(contrasts)
   end
 end
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% another control analysis for eyes %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% phasic modulation in decoding %%%
@@ -208,6 +212,28 @@ for subj=valid_subjects
   end
 end
 
+% for plotting the entire cortex in selected frequencies
+whichparc_rest = setdiff(1:370, whichparc);
+h = 1;
+for f = [4 9 20]
+  for w=1:numel(whichparc_rest)
+    qsubfeval(@analysis_decoding, subj,'attended','hemi', h,...
+          'do_correcttrials', 1, 'do_avgtrials', 1, 'rngseed', [],...
+          'do_prewhiten', 2, 'f', f,'nbins', 18, 'groupsize', 5,'doparc', 1, 'whichparc',whichparc_rest(w),...
+          'randnr', [],'do_randphasebin',0, 'nrandperm',1, 'nperm', 20, 'memreq', 8*1024^3, 'timreq', 2*3600);
+  end
+end
+
+h = 2;
+for f = [4 10 13]
+  for w=1:numel(whichparc_rest)
+    qsubfeval(@analysis_decoding, subj,'attended','hemi', h,...
+          'do_correcttrials', 1, 'do_avgtrials', 1, 'rngseed', [],...
+          'do_prewhiten', 2, 'f', f,'nbins', 18, 'groupsize', 5,'doparc', 1, 'whichparc',whichparc_rest(w),...
+          'randnr', [],'do_randphasebin',0, 'nrandperm',1, 'nperm', 20, 'memreq', 8*1024^3, 'timreq', 2*3600);
+  end
+end
+
 %%%%%%%%%%%%%%%%%%%%%%%
 % random permutations %
 %%%%%%%%%%%%%%%%%%%%%%%
@@ -260,6 +286,17 @@ for subj=valid_subjects
     end
   end
 end
+
+f = [4 9 20; 4 10 13];
+for h=[1 2]
+  for subj=valid_subjects
+    for w=1:numel(whichparc_rest)
+      analysis_phasic_modulation(subj, 'freqs', f(h,:), 'dorand', false, 'doparc', true, 'whichparc', whichparc_rest(w), 'hemis', h);
+    end
+  end
+end
+
+
 
 %% Group analysis
 % TFR on the group level
