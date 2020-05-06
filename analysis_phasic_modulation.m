@@ -97,6 +97,9 @@ end
 if dosave
   filedir = [projectdir, 'results/modulation/']; 
   filename = [filedir, sprintf('sub%02d_phasicmodulation_decoding', subj)];
+  if numel(hemis)==1
+    filename = [filename, sprintf('_hemi%d', hemis)];
+  end
   if doparc
     filename = [filename, '_parc'];
     if ~isempty(whichparc)
