@@ -105,10 +105,10 @@ end
 switch whichdata
   case 'behavior'
     filename = [projectdir, 'results/stat_phasicmodulation_behavior'];
-%     save(filename, 'stat', 'amp', 'ang','ampr')
+    save(filename, 'stat', 'amp', 'ang','ampr')
   case 'neural'
     filename = [projectdir, 'results/stat_phasicmodulation_decoding_parc'];
-%     save(filename, 'stat', 'amp', 'ang','ampr')
+    save(filename, 'stat', 'amp', 'ang','ampr')
 end
 
 n=10;
