@@ -54,6 +54,10 @@ for c=1:numel(contrasts)
     accuracy(c,h).mean = mean(dat(c,h).trial);
     accuracy(c,h).std = std(dat(c,h).trial);
     accuracy(c,h).all = dat(c,h).trial;
+    
+    accuracyrand(c,h).mean = mean(datrand(c,h).trial);
+    accuracyrand(c,h).std = std(datrand(c,h).trial);
+    accuracyrand(c,h).all = datrand(c,h).trial;
   end
 end
 
@@ -61,7 +65,7 @@ filename = [projectdir, 'results/stat_decoding'];
 if doeye
   filename = [filename, '_eye'];
 end
-save(filename, 'stat', 'accuracy')
+save(filename, 'stat', 'accuracy','accuracyrand')
 
 
 
