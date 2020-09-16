@@ -36,3 +36,24 @@ end
 
 filename = [projectdir, 'results/stat_phasicmodulation_decoding'];
 save(filename, 'stat', 'amp', 'amprand')
+
+% calculate bayes factor
+n=10;
+cfg = [];
+cfg.method = 'analytic';
+cfg.statistic = 'ft_statfun_bayesfactor';
+cfg.ivar = 1;
+cfg.uvar = 2;
+cfg.design = [ones(1,n), 2*ones(1,n); 1:n, 1:n];
+for h=hemis
+    dat{h} = [];
+    dat{h}.label={'modulation'};
+    dat{h}.dimord = 'rpt_chan_freq';
+    dat{h}.powspctrm(:,1,:) = amp{h}';
+    dat{h}.freq = 4:30;
+    
+    datrand{h} = removefields(dat{h}, 'powspctrm');
+    datrand{h}.powspctrm(:,1,:) = transpose(nanmean(amprand{h},3));
+    bayesfactor(h) = ft_freqstatistics(cfg, dat{h}, datrand{h});
+end
+save(filename, 'bayesfactor', '-append')
