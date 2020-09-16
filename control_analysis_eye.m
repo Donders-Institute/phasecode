@@ -29,10 +29,10 @@ idx_traindata_trials = [];
 
 data_eye = returndata_eye.bindat;
 
-
+ntimes_chance = 0;
 T = 1;
 N=0;
-while T==1
+while T==1 || ntimes_chance<5
   acc=[];
   acc0=[];
   clear dist which_correct
@@ -84,6 +84,7 @@ end
     model0 = model;
     model0 = model0.train(traindata{ifold},traindesign{ifold}(randperm(numel(traindesign{ifold}))));
     dual{ifold} = model.dual(1:end-1);
+    disttrain{ifold} = model.test(traindata{ifold});
     dist{ifold} = model.test(testdata{ifold});
     which_correct{ifold} = double(double(dist{ifold}(:,1)>0)==mod(testdesign{ifold},2));
     acc(ifold) = mean(which_correct{ifold}); %
@@ -92,6 +93,7 @@ end
   end
   T=ttest(acc,acc0);
   if T==1
+    ntimes_chance = 0;
     if N==0
       acc_eye_pre = acc;
       acc0_eye_pre = acc0;
@@ -99,12 +101,14 @@ end
     end
     N=N+1;
     for ifold=1:nfolds
-      n=size(trial_index{ifold},2);
-      dual1 = dual{ifold}(1:n/2,1);
-      dual2 = dual{ifold}(n/2+1:end,1);
+      n=size(disttrain{ifold},1);
+      r1 = disttrain{ifold}(1:n/2,1);
+      r1(r1==0)=nan;
+      r2 = disttrain{ifold}(n/2+1:end,2);
+      r2(r1==2)=nan;
       % find the most discriminating observation for each class
-      [~, ix1] = max(abs(dual1));
-      [~, ix2] = max(abs(dual2));
+      [~, ix1] = max(abs(r1));
+      [~, ix2] = max(abs(r2));
       
       tmpidx1(ifold) = idx_traindata_trials{ifold}(ix1); % this is the trial index from eye_data
       tmpidx2(ifold) = idx_traindata_trials{ifold}(ix2);
@@ -117,6 +121,7 @@ end
     data_eye{2}.trial(unique(tmpidx2),:) = [];
     idx_leftover_trials{2}(unique(tmpidx2)) = [];
   else
+    ntimes_chance = ntimes_chance+1;
     acc_eye = acc;
     acc0_eye = acc0;
     [T_eye.H, T_eye.P, T_eye.CI, T_eye.STATS] = ttest(acc_eye,acc0_eye);
