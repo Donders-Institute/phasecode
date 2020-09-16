@@ -1,14 +1,10 @@
 function analysis_phasic_modulation_group(varargin)
 
-doparc = ft_getopt(varargin, 'doparc', false);
 hemis=[1 2];
 datainfo
 
 for subj=valid_subjects
   filename = [projectdir, sprintf('results/modulation/sub%02d_phasicmodulation_decoding', subj)];
-  if doparc
-    filename = [filename, '_parc'];
-  end
   tmp = load(filename, 'amp', 'amp_rand', 'ang');
   for h=hemis
     amp{h}(:,subj) = tmp.amp(h,:)';
@@ -39,7 +35,4 @@ for h=hemis
 end
 
 filename = [projectdir, 'results/stat_phasicmodulation_decoding'];
-if doparc
-  filename = [filename, '_parc'];
-end
 save(filename, 'stat', 'amp', 'amprand')

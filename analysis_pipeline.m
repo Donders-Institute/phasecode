@@ -306,7 +306,6 @@ analysis_timfreq_group
 analysis_decoding_group
 
 % test phasic modulation of decoding performance
-% FIXME: needs adjustment for statistics
 analysis_phasic_modulation_group
 
 whichdata = 'behavior';
