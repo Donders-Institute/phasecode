@@ -155,43 +155,25 @@ sprintf('decoding accuracy unattended, left %d percent (SD %d), p=%d; right %d p
 
 cmap = brewermap(2,'RdBu');
 figure; violinplot(100*x.accuracy(1,1).all, 'facecolor', cmap(1,:), 'medc', [], 'x', 1, 'pointsize', 1)
-hold on, violinplot(100*y.accuracy(1,1).all, 'facecolor', cmap(2,:), 'medc', [], 'x', 1, 'pointsize', 1)
-violinplot(100*x.accuracy(1,2).all, 'facecolor', cmap(1,:), 'medc', [], 'x', 2, 'pointsize', 1)
+hold on, violinplot(100*x.accuracy(1,2).all, 'facecolor', cmap(1,:), 'medc', [], 'x', 2, 'pointsize', 1)
+violinplot(100*y.accuracy(1,1).all, 'facecolor', cmap(2,:), 'medc', [], 'x', 1, 'pointsize', 1)
 violinplot(100*y.accuracy(1,2).all, 'facecolor', cmap(2,:), 'medc', [], 'x', 2, 'pointsize', 1)
 ylim([45 80])
 xlim([0 3])
 saveas(gcf, [figures_dir, 'decoding_accuracy.eps'],'epsc')
 
-%% Primals decoding
-
-hemis=[1 2];
-for subj=valid_subjects
-  label = load([datadir, sprintf('sub%02d/meg%02d/sub%02d-meg%02d_cleandata.mat', subj, 2, subj, 2)]);
-  label = label.data.label;
-  for h=hemis
-    filename = [results_dir, 'collapsephasebin/attended/', sprintf('sub%02d/sub%02d_decoding_hemi%d.mat', subj, subj, h)];
-    tmp = load(filename, 'primal_P');
-    primal_P{subj,h}.avg = tmp.primal_P;
-    primal_P{subj,h}.label = label;
-    primal_P{subj,h}.time = 0;
-    primal_P{subj,h}.dimord = 'chan_time';
-  end
-end
-cfgp=[];
-cfgp.layout = 'CTF275_helmet.mat';
-cfgp.colormap = flipud(brewermap(64, 'RdBu'));
-cfgp.zlim = 'maxabs';
-cfgp.numcontour = 0;
-cfgp.gridscale = 250;
-cfgp.marker = 'off';
-sc = {'a', 'b'};
-for h=hemis
-  for subj=valid_subjects
-    figure; maximize;
-    ft_topoplotER(cfgp, primal_P{subj,h});
-    saveas(gcf, [figures_dir, sprintf('primal_topo_new/primal_sub%02d%s.eps',subj, sc{h})], 'epsc')
-  end
-end
+m1 = x.accuracyrand(1,1).mean;
+s1 = x.accuracyrand(1,1).std;
+m2 = x.accuracyrand(1,2).mean;
+s2 = x.accuracyrand(1,2).std;
+m3 = y.accuracyrand(1,1).mean;
+s3 = y.accuracyrand(1,1).std;
+m4 = y.accuracyrand(1,2).mean;
+s4 = y.accuracyrand(1,2).std;
+figure; shadedErrorBar(1:4, 100*[m1 m1 m2 m2], 100*[s1 s1 s2 s2]);ylim([45 80]); xlim([0 3])
+saveas(gcf, [figures_dir, 'decoding_accuracy_rand.eps'],'epsc')
+figure; shadedErrorBar(1:4, 100*[m3 m3 m4 m4], 100*[s3 s3 s4 s4]);ylim([45 80]); xlim([0 3])
+saveas(gcf, [figures_dir, 'decoding_accuracy_rand_eye.eps'],'epsc')
 
 
 
@@ -239,26 +221,30 @@ end
 x = load([results_dir, 'stat_phasicmodulation_behavior']);
 dum = load([projectdir, 'results/TFR_group.mat'],'L');
 freqs = x.stat{1}.time;
-%%%%%%%%%%%%%
-% statistic %
-%%%%%%%%%%%%%
+
 % attend left
-ix=8; fx = 5;
-f1 = find(x.stat{1}.time==8);
-f2 = find(x.stat{1}.time==8);
-params={'stat', 'std', 'prob'};
-for k=1:numel(params)
-  s(k) = x.stat{1}.(params{k})(ix,fx)*100;
-end
-sprintf('attend left: cluster 1: left FEF, 8 Hz, mean = %d , SD = %d percent, p = %d', s(1), s(2), s(3)/100)
+h=1;
+x.stat{h}.mask = x.stat{h}.posclusterslabelmat==1; % visual inspection 
+y = reshape(x.amp{h}, [],10);
+y = mean(y(x.stat{h}.mask,:),1);
+mu = mean(y);
+sigma2 = std(y);
+f1 = min(x.stat{h}.time(find(sum(x.stat{h}.posclusterslabelmat==1))));
+f2 = max(x.stat{h}.time(find(sum(x.stat{h}.posclusterslabelmat==1))));
+parc = x.stat{h}.label(find(sum(x.stat{h}.posclusterslabelmat==1,2)));
+sprintf('attend left: cluster 1: %s, %d-%d Hz, clusterstat = %d, mean = %d , SD = %d percent, p = %d; BF = %d', parc{1}, f1, f2, x.stat{h}.posclusters(1).clusterstat, mu, sigma2, x.stat{h}.posclusters(1).prob, x.bf(h).bf10)
 
 % attend right
-ix=4; fx = 10;
-params={'stat', 'std', 'prob'};
-for k=1:numel(params)
-  s(k) = x.stat{1}.(params{k})(ix,fx)*100;
-end
-sprintf('attend right: cluster 1: left FEF, 13 Hz, mean = %d , SD = %d percent, p = %d', s(1), s(2), x.stat{2}.posclusters(1).prob)
+h=2;
+x.stat{h}.mask = x.stat{h}.posclusterslabelmat==1; % visual inspection 
+y = reshape(x.amp{h}, [],10);
+y = mean(y(x.stat{h}.mask,:),1);
+mu = mean(y);
+sigma2 = std(y);
+f1 = min(x.stat{h}.time(find(sum(x.stat{h}.posclusterslabelmat==1))));
+f2 = max(x.stat{h}.time(find(sum(x.stat{h}.posclusterslabelmat==1))));
+parc = x.stat{h}.label(find(sum(x.stat{h}.posclusterslabelmat==1,2)));
+sprintf('attend right: cluster 1: %s, %d-%d Hz, clusterstat = %d, mean = %d , SD = %d percent, p = %d; BF = %d', parc{1}, f1, f2, x.stat{h}.posclusters(1).clusterstat, mu, sigma2, x.stat{h}.posclusters(1).prob, x.bf(h).bf10)
 
 
 %%%%%%%%%%%%%%%%%%
@@ -420,30 +406,30 @@ addpath([projectdir, 'scripts/CanlabCore/CanlabCore/Visualization_functions/'])
 % statistic %
 %%%%%%%%%%%%%
 % attend left
-x.stat{1}.mask = x.stat{1}.posclusterslabelmat==1; % visual inspection 
+h=1;
+x.stat{h}.mask = x.stat{h}.posclusterslabelmat==1; % visual inspection 
 % shows that this concerns right FEF
-f1 = find(x.stat{1}.time==17);
-f2 = find(x.stat{1}.time==12);
-params={'stat', 'std'};
-for k=1:numel(params)
-  y = x.stat{1}.(params{k}).*x.stat{1}.mask;
-  y(y==0)=nan;
-  s(k) = nanmean(nanmean(y(:,f1:f2)))*100;
-end
-sprintf('attend left: cluster 1: right FEF, 20 Hz, clusterstat = %d, mean = %d , SD = %d percent, p = %d', x.stat{1}.posclusters(1).clusterstat, s(1), s(2), x.stat{1}.posclusters(1).prob)
+y = reshape(x.amp{h}, [],10);
+y = mean(y(x.stat{h}.mask,:),1);
+mu = mean(y);
+sigma2 = std(y);
+f1 = min(x.stat{h}.time(find(sum(x.stat{h}.posclusterslabelmat==1))));
+f2 = max(x.stat{h}.time(find(sum(x.stat{h}.posclusterslabelmat==1))));
+parc = x.stat{h}.label(find(sum(x.stat{h}.posclusterslabelmat==1,2)));
+sprintf('attend left: cluster 1: %s, %d-%d Hz, clusterstat = %d, mean = %d , SD = %d percent, p = %d; BF = %d', parc{1}, f1, f2, x.stat{h}.posclusters(1).clusterstat, mu, sigma2, x.stat{h}.posclusters(1).prob, x.bf(h).bf10)
 
 % attend right
-x.stat{2}.mask = x.stat{2}.posclusterslabelmat==1 %| x.stat{2}.posclusterslabelmat==2; % visual inspection 
-% shows that this cluster is mostly present in parietal regions, 9-15 Hz
-f1 = find(x.stat{1}.time==8);
-f2 = find(x.stat{1}.time==12);
-params={'stat', 'std'};
-for k=1:numel(params)
-  y = x.stat{2}.(params{k}).*x.stat{2}.mask;
-  y(y==0)=nan;
-  s(k) = nanmean(nanmean(y(:,f1:f2)))*100;
-end
-sprintf('attend right: cluster 1: left parietal cortex and FEF, 8-12 Hz, clusterstat = %d, mean = %d , SD = %d percent, p = %d', 100*x.stat{2}.posclusters(1).clusterstat, s(1), s(2), x.stat{2}.posclusters(1).prob)
+h=2;
+x.stat{h}.mask = x.stat{h}.posclusterslabelmat==1; % visual inspection 
+% shows that this concerns right FEF
+y = reshape(x.amp{h}, [],10);
+y = mean(y(x.stat{h}.mask,:),1);
+mu = mean(y);
+sigma2 = std(y);
+f1 = min(x.stat{h}.time(find(sum(x.stat{h}.posclusterslabelmat==1))));
+f2 = max(x.stat{h}.time(find(sum(x.stat{h}.posclusterslabelmat==1))));
+parc = x.stat{h}.label(find(sum(x.stat{h}.posclusterslabelmat==1,2)));
+sprintf('attend right: cluster 1: %s, %d-%d Hz, clusterstat = %d, mean = %d , SD = %d percent, p = %d; BF = %d', parc{1}, f1, f2, x.stat{h}.posclusters(1).clusterstat, mu, sigma2, x.stat{h}.posclusters(1).prob, x.bf(h).bf10)
 
 
 % color settings
@@ -466,16 +452,18 @@ cfgp.maskparameter = cfgp.funparameter;
 cfgp.funcolorlim = [0 0.014];
 
 % create mask showing the selected ROIs
-cfgp2=cfgp;
-cfgp2.funcolormap = [0 0 0; 0.5 0.5 0.5];
-dum = x.stat{1};
-dum.time=0;
-dum.stat = zeros(374,1);
-dum.stat(selparc(whichparc))=1;
-ft_sourceplot(cfgp2, dum)
+load atlas_subparc374_8k.mat
+for k=1:numel(useparc)
+whichparc2{k} = find(contains(atlas.parcellationlabel, useparc{k}));
+end
+whichparc2 = unique(cat(1,whichparc2{:}));
+x=ismember(atlas.parcellation, whichparc2);
+figure; ft_plot_mesh(dum.brainordinate, 'contour', x, 'contourcolor', 'r', 'facecolor', 'skin')
+lighting gouraud
+camlight
+material dull
 view([0 90])
 maximize
-material dull
 saveas(gcf, [figures_dir, 'methods_roi_mask.tif'])
 %%%%%%%%%%%%%%%
 % attend left %
