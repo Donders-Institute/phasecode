@@ -1,34 +1,9 @@
  function [stat, cfg] = statfun_perm(cfg, dat, randdat)
 
-% STATFUN_xxx is a function for computing a statistic for the relation
-% between biological data and a design vector containing trial
-% classifications or another independent variable
+% STATFUN_PERM is a function for computing a statistic based on a variable
+% and a precpmputed permutation distribution.
 %
-% This function is called by STATISTICS_MONTECARLO, where you can specify
-% cfg.statistic = 'xxx' which will be evaluated as statfun_xxx.
-%
-% The external interface of this function has to be
-%   [s] = statfun_xxx(cfg, dat, design);
-% where
-%   dat    contains the biological data, Nvoxels x Nreplications
-%   design contains the independent variable,  1 x Nreplications
-%
-% Additional settings can be passed through to this function using
-% the cfg structure.
-%
-% STATFUN_COSINEFIT fits a cosine to the data dat. the independent
-% variable design should contain angular values, bounded by -pi and pi.
-%
-% the output s is a structure containing the statistic, as specified by
-%  cfg.cosinefit.statistic. this can either be the amplitude (default) of the fit, angle   (giving the preferred angle), complex (giving both angle and amplitude in a complex number), or fit (giving the percentage of explained variance).
-% additional fields in the output=structure are:
-%  s.r      percentage of explained variance.
-%  s.offset the DC-component of the fit.
-%
-% Additional cfg-options are:
-%  cfg.cosinefit.phi = [] (default) or angular value between -pi and pi, estimates the amplitude of a cosine at a given angle.
-
-% Copyright (C) 2006 Jan-Mathijs Schoffelen
+% Copyright (C) 2020 Mats van Es
 
 if ~isfield(cfg, 'numrandomization'), numrandomization = 1; end
 if ~isfield(cfg, 'ivar'), error('ivar was not provided'); end
