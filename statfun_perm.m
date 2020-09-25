@@ -1,15 +1,15 @@
  function [stat, cfg] = statfun_perm(cfg, dat, randdat)
 
 % STATFUN_PERM is a function for computing a statistic based on a variable
-% and a precpmputed permutation distribution.
+% and a precpmputed permutation distribution. Only working for cfg.tail =1;
 %
 % Copyright (C) 2020 Mats van Es
-
+warning('this function currently only works with cfg.tail=1')
 if ~isfield(cfg, 'numrandomization'), numrandomization = 1; end
 if ~isfield(cfg, 'ivar'), error('ivar was not provided'); end
 if ~isfield(cfg, 'uvar'), error('uvar was not provided'); end
 cfg.alpha            = ft_getopt(cfg, 'alpha',      0.05);
-cfg.tail             = ft_getopt(cfg, 'tail',       0);
+cfg.tail             = ft_getopt(cfg, 'tail',       1);
 cfg.correctm         = ft_getopt(cfg, 'correctm',   'no');
 cfg.resampling       = ft_getopt(cfg, 'resampling', 'permutation');
 cfg.clusteralpha     = ft_getopt(cfg, 'clusteralpha',      0.05);
@@ -17,7 +17,9 @@ cfg.clustertail      = ft_getopt(cfg, 'clustertail',      0);
 cfg.clusterstatistic = ft_getopt(cfg, 'clusterstatistic', 'maxsum');
 cfg.clusterthreshold = ft_getopt(cfg, 'clusterthreshold', 'parametric');
 cfg.correctm         = ft_getopt(cfg, 'correctm', []);
-
+if cfg.tail~=1
+    error('this function only works with cfg.tail=1');
+end
 Nrand                = getfield(cfg, 'numrandomization');
 uvar                 = getfield(cfg, 'uvar');
 ivar                 = getfield(cfg, 'ivar');
