@@ -223,6 +223,8 @@ dum = load([projectdir, 'results/TFR_group.mat'],'L');
 freqs = x.stat{1}.time;
 
 % attend left
+x = load([results_dir, 'stat_phasicmodulation_behavior']);
+
 h=1;
 x.stat{h}.mask = x.stat{h}.posclusterslabelmat==1; % visual inspection 
 y = reshape(x.amp{h}, [],10);
@@ -290,6 +292,7 @@ material dull
 saveas(gcf, [figures_dir, 'modulation_behavior_left_8hz.tif'])
 
 ix = match_str(s.label,  {'L_8_B05_06'});
+sprintf('average modulated strength at %s is %d (SD = %d, p = %d | BF = %d)', x.stat{k}.label{ix}, x.stat{k}.stat(ix,tx),x.stat{k}.std(ix,tx),x.stat{k}.prob(ix,tx), x.bf_single(k).bf10(ix,tx))
 figure; hold on,
 y=[2e-3 23e-3];
 fill([freqs';flipud(freqs')],[Y(:,ix)-dY(:,ix);flipud(Y(:,ix)+dY(:,ix))],[0.8 0.8 0.8],'linestyle','none');
@@ -307,7 +310,7 @@ saveas(gcf, [figures_dir, 'modulation_behavior_left_L8_06.eps'],'epsc')
 
 s = x.stat{k};
 t=14;
-tx = s.time==t;
+tx = find(s.time==t);
 s.stat = s.mean(:,tx);
 s.time = t;
 ft_sourceplot(cfgp, s)
@@ -317,12 +320,14 @@ material dull
 saveas(gcf, [figures_dir, 'modulation_behavior_left_14hz.tif'])
 
 ix = match_str(s.label,  {'L_5_B05_01'});
+sprintf('average modulated strength at %s is %d (SD = %d, p = %d | BF = %d)', x.stat{k}.label{ix}, x.stat{k}.stat(ix,tx),x.stat{k}.std(ix,tx),x.stat{k}.prob(ix,tx), x.bf_single(k).bf10(ix,tx))
 figure; hold on
 y=[2e-3 23e-3];
 fill([freqs';flipud(freqs')],[Y(:,ix)-dY(:,ix);flipud(Y(:,ix)+dY(:,ix))],[0.8 0.8 0.8],'linestyle','none');
 line(freqs,Y(:,ix),'color', [0.5 0.5 0.5])
 fill([freqs';flipud(freqs')],[Z(:,ix)-dZ(:,ix);flipud(Z(:,ix)+dZ(:,ix))],cmap2(1,:),'linestyle','none');
 line(freqs,Z(:,ix),'color', 'r')
+
 hold on, for ii=1:10
 plot(freqs(end)+[1 5], [squeeze(x.ampr{k}(ix,tx,ii)), squeeze(x.amp{k}(ix,tx,ii))], '--o', 'color', c(ii,:))
 end
@@ -343,6 +348,7 @@ material dull
 saveas(gcf, [figures_dir, 'modulation_behavior_left_12hz.tif'])
 
 ix = match_str(s.label,  {'R_7_B05_01'});
+sprintf('average modulated strength at %s is %d (SD = %d, p = %d | BF = %d)', x.stat{k}.label{ix}, x.stat{k}.stat(ix,tx),x.stat{k}.std(ix,tx),x.stat{k}.prob(ix,tx), x.bf_single(k).bf10(ix,tx))
 figure; hold on,
 y=[2e-3 20e-3];
 fill([freqs';flipud(freqs')],[Y(:,ix)-dY(:,ix);flipud(Y(:,ix)+dY(:,ix))],[0.8 0.8 0.8],'linestyle','none');
@@ -377,6 +383,8 @@ material dull
 saveas(gcf, [figures_dir, 'modulation_behavior_right_13hz.tif'])
 
 ix = match_str(s.label,  {'L_8_B05_02'});
+sprintf('average modulated strength at %s is %d (SD = %d, p = %d | BF = %d)', x.stat{k}.label{ix}, x.stat{k}.stat(ix,tx),x.stat{k}.std(ix,tx),x.stat{k}.prob(ix,tx), x.bf_single(k).bf10(ix,tx))
+
 figure; hold on,
 y=[3e-3 22e-3];
 fill([freqs';flipud(freqs')],[Y(:,ix)-dY(:,ix);flipud(Y(:,ix)+dY(:,ix))],[0.8 0.8 0.8],'linestyle','none');
@@ -490,6 +498,8 @@ saveas(gcf, [figures_dir, 'modulation_parc_left_4hz.tif'])
 % line plot
 figure;hold on
 ix = match_str(x.stat{k}.label, 'R_8_B05_06');
+sprintf('average modulated strength at %s is %d (SD = %d, p = %d | BF = %d)', x.stat{k}.label{ix}, x.stat{k}.stat(ix,tx),x.stat{k}.std(ix,tx),x.stat{k}.prob(ix,tx), x.bf_single(k).bf10(ix,tx))
+
 fill([freqs';flipud(freqs')],[Y(:,ix)-dY(:,ix);flipud(Y(:,ix)+dY(:,ix))],[0.8 0.8 0.8],'linestyle','none');
 line(freqs,Y(:,ix),'color', [0.5 0.5 0.5])
 fill([freqs';flipud(freqs')],[Z(:,ix)-dZ(:,ix);flipud(Z(:,ix)+dZ(:,ix))],cmap2(1,:),'linestyle','none');
@@ -518,6 +528,8 @@ saveas(gcf, [figures_dir, 'modulation_parc_left_9hz.tif'])
 % line plot
 figure; hold on
 ix = match_str(x.stat{k}.label, 'R_19_B05_12');
+sprintf('average modulated strength at %s is %d (SD = %d, p = %d | BF = %d)', x.stat{k}.label{ix}, x.stat{k}.stat(ix,tx),x.stat{k}.std(ix,tx),x.stat{k}.prob(ix,tx), x.bf_single(k).bf10(ix,tx))
+
 fill([freqs';flipud(freqs')],[Y(:,ix)-dY(:,ix);flipud(Y(:,ix)+dY(:,ix))],[0.8 0.8 0.8],'linestyle','none');
 line(freqs,Y(:,ix),'color', [0.5 0.5 0.5])
 fill([freqs';flipud(freqs')],[Z(:,ix)-dZ(:,ix);flipud(Z(:,ix)+dZ(:,ix))],cmap2(1,:),'linestyle','none');
@@ -546,6 +558,8 @@ saveas(gcf, [figures_dir, 'modulation_parc_left_20hz.tif'])
 % line plot
 figure;hold on
 ix = match_str(x.stat{k}.label, 'R_8_B05_02');
+sprintf('average modulated strength at %s is %d (SD = %d, p = %d | BF = %d)', x.stat{k}.label{ix}, x.stat{k}.stat(ix,tx),x.stat{k}.std(ix,tx),x.stat{k}.prob(ix,tx), x.bf_single(k).bf10(ix,tx))
+
 fill([freqs';flipud(freqs')],[Y(:,ix)-dY(:,ix);flipud(Y(:,ix)+dY(:,ix))],[0.8 0.8 0.8],'linestyle','none');
 line(freqs,Y(:,ix),'color', [0.5 0.5 0.5])
 fill([freqs';flipud(freqs')],[Z(:,ix)-dZ(:,ix);flipud(Z(:,ix)+dZ(:,ix))],cmap2(1,:),'linestyle','none');
@@ -600,6 +614,8 @@ saveas(gcf, [figures_dir, 'modulation_parc_right_4hz.tif'])
 % line plot
 figure;hold on
 ix = match_str(x.stat{k}.label, 'L_7_B05_05');
+sprintf('average modulated strength at %s is %d (SD = %d, p = %d | BF = %d)', x.stat{k}.label{ix}, x.stat{k}.stat(ix,tx),x.stat{k}.std(ix,tx),x.stat{k}.prob(ix,tx), x.bf_single(k).bf10(ix,tx))
+
 fill([freqs';flipud(freqs')],[Y(:,ix)-dY(:,ix);flipud(Y(:,ix)+dY(:,ix))],[0.8 0.8 0.8],'linestyle','none');
 line(freqs,Y(:,ix),'color', [0.5 0.5 0.5])
 fill([freqs';flipud(freqs')],[Z(:,ix)-dZ(:,ix);flipud(Z(:,ix)+dZ(:,ix))],cmap2(1,:),'linestyle','none');
@@ -629,6 +645,8 @@ saveas(gcf, [figures_dir, 'modulation_parc_right_10hz.tif'])
 % line plot #1
 figure;hold on
 ix = match_str(x.stat{k}.label, 'L_5_B05_02');
+sprintf('average modulated strength at %s is %d (SD = %d, p = %d | BF = %d)', x.stat{k}.label{ix}, x.stat{k}.stat(ix,tx),x.stat{k}.std(ix,tx),x.stat{k}.prob(ix,tx), x.bf_single(k).bf10(ix,tx))
+
 fill([freqs';flipud(freqs')],[Y(:,ix)-dY(:,ix);flipud(Y(:,ix)+dY(:,ix))],[0.8 0.8 0.8],'linestyle','none');
 line(freqs,Y(:,ix),'color', [0.5 0.5 0.5])
 fill([freqs';flipud(freqs')],[Z(:,ix)-dZ(:,ix);flipud(Z(:,ix)+dZ(:,ix))],cmap2(1,:),'linestyle','none');
