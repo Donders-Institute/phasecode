@@ -50,7 +50,8 @@ for i=1:Nrand
   statrand(:,i) = nanmean(tmp,2);
 end
 
-uncorrected_p = sum(statobs>statrand,2)./Nrand;
+uncorrected_p = sum(statobs<statrand,2)./Nrand;
+uncorrected_p = max(uncorrected_p, 1./Nrand); % minimum p-value depends on number of randomizations
 if ~isfield(cfg, 'dim')
   cfg.dim = size(statobs);
 end
