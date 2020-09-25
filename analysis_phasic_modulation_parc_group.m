@@ -83,7 +83,7 @@ tmpampr = ampr;
 end
 
 for h=hemis
-  [s1 s2 s3 s4] = size(tmpampr{h});
+  [s1 s2 s3 s4] = size(ampr{h});
   dat = reshape(amp{h}, s1*s2, s3);
   datrand = reshape(ampr{h}, s1*s2, s3, s4);
   cfg.dim = [s1, s2];
@@ -95,8 +95,8 @@ for h=hemis
   stat{h}.brainordinate = atlas;
   stat{h}.mean = mean(amp{h},3);
   stat{h}.std = std(amp{h},[],3);
-  stat{h}.randstd = mean(std(tmpampr{h}, [], 4),3);
-  stat{h}.randmean = mean(mean(tmpampr{h},4),3);
+  stat{h}.randstd = mean(std(ampr{h}, [], 4),3);
+  stat{h}.randmean = mean(mean(ampr{h},4),3);
 end
 for h=1:2
   ampr{h} = nanmean(ampr{h},4);
