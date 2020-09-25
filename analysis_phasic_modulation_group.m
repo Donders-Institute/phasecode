@@ -1,4 +1,4 @@
-function analysis_phasic_modulation_group(varargin)
+function analysis_phasic_modulation_group
 
 hemis=[1 2];
 datainfo
